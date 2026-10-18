@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Levels transition demo: switch circuit, then gate, then module</title>
+<link rel="stylesheet" href="style.css">
+<script src="gates/gates.js"></script><script src="parts/parts.js"></script>
+<style>
+.stage{position:relative;height:220px;background:var(--inset);border-radius:18px;overflow:hidden;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
+.layer{position:absolute;left:50%;top:50%;transform-origin:50% 50%;translate:-50% -50%}
+#circuit svg{width:360px;height:auto;display:block}
+#gate svg{width:150px;height:100px;display:block}
+#module{opacity:0}
+#module .micon{opacity:0}
+.cap{display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:space-between;color:var(--muted);font:700 12px var(--mono);margin-top:8px}
+</style></head><body>
+<h1>Levels: switch circuit → AND gate → module</h1>
+<section class="panel">
+ <div class="controls" style="margin-bottom:10px">
+  <button class="btn primary" id="collapse">Collapse ▸</button><button class="btn" id="expand">◂ Expand</button>
+  <label class="switch"><input type="checkbox" id="a" checked> A</label><label class="switch"><input type="checkbox" id="b" checked> B</label>
+ </div>
+ <div class="stage" id="stage">
+  <div class="layer" id="circuit"></div>
+  <div class="layer" id="gate"></div>
+  <div class="layer" id="module"></div>
+ </div>
+ <div class="cap"><span id="clock">t = 0 ms</span><span>collapse ≈ 860 ms · expand ≈ 860 ms (reverse)</span></div>
+</section>
+<footer>Recipe: TRANSITIONS.md. Freeze for screenshots: <code>?dir=collapse&amp;t=300</code></footer>
+<script>
+const $=id=>document.getElementById(id);
+const at=(k,x,y,cls='')=>PARTS[k].replace('<svg ',`<svg x='${x}' y='${y}' `).replace("class='part ",`class='part ${cls} `);
+function draw(){
+  const A=$('a').checked,B=$('b').checked,Y=A&&B, on=v=>v?' on':'', fl=v=>v?' on flow':'';
+  $('circuit').innerHTML=`<svg viewBox="0 0 420 110">
+   <path class="wire${fl(1)}" d="M80 20 H120"/><path class="wire${fl(A)}" d="M180 20 H200"/><path class="wire${fl(Y)}" d="M260 20 H300"/><path class="wire${fl(Y)}" d="M360 20 H395 V90 H8 V20 H20"/>
+   ${at('battery',20,0,'on')}${at('switch',120,0,(A?'closed':'')+on(A))}${at('switch',200,0,(B?'closed':'')+on(A&&B))}${at('lamp',300,0,on(Y))}
+   <text class="lbl${on(A)}" x="150" y="52" text-anchor="middle">A</text><text class="lbl${on(B)}" x="230" y="52" text-anchor="middle">B</text><text class="lbl${on(Y)}" x="330" y="52" text-anchor="middle">Y</text></svg>`;
+  const g=GATES.and.replace("class='gate ",`class='gate${on(Y)} `).replace("class='lead lead-a'",`class='lead lead-a${on(A)}'`).replace("class='lead lead-b'",`class='lead lead-b${on(B)}'`);
+  $('gate').innerHTML=g;
+  $('module').innerHTML=`<div class="module${on(Y)}"><div class="mpins in"><div class="mpin${on(A)}"><span>A</span></div><div class="mpin${on(B)}"><span>B</span></div></div>
+    <div class="mtitle"><svg class="micon gate${on(Y)}" viewBox="0 0 60 40" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${g.replace(/^<svg[^>]*>/,'').replace(/<\/svg>$/,'')}</svg>AND<button class="mexp" aria-expanded="false" aria-label="Expand AND"></button></div>
+    <div class="mpins out"><div class="mpin${on(Y)}"><span>Y</span></div></div></div>`;
+}
+draw();
+const rel=el=>{const s=$('stage').getBoundingClientRect(),r=el.getBoundingClientRect();return{x:r.left-s.left+r.width/2,y:r.top-s.top+r.height/2,w:r.width,h:r.height}};
+// timeline (ms) for COLLAPSE; EXPAND plays the same keyframes reversed with mirrored delays
+const TOTAL=860;
+const EASE={out:'cubic-bezier(.2,.8,.2,1)',in:'cubic-bezier(.4,0,1,1)',inout:'cubic-bezier(.65,0,.35,1)',spring:'cubic-bezier(.3,1.35,.6,1)'};
+function plan(){
+  const C=rel($('circuit')),G=rel($('gate')),M=rel($('module').firstElementChild),I=rel($('module').querySelector('.micon'));
+  const gs=Math.min(C.w/G.w,C.h/G.h)*.75;              // gate starts at the circuit's size (FLIP invert)
+  const toIcon=`translate(${I.x-G.x}px,${I.y-G.y}px) scale(${I.w/G.w})`;
+  const mInv=`scale(${G.w/M.w},${G.h/M.h})`;            // module starts as the gate's box
+  const leads=[...$('gate').querySelectorAll('.lead')];
+  const pins=[...$('module').querySelectorAll('.mpin')];
+  const A=[];
+  // 1. circuit cross-fades out, shrinking to its centre (0-280)
+  A.push([$('circuit'),[{opacity:1,transform:'scale(1)',filter:'blur(0)'},{opacity:0,transform:'scale(.6)',filter:'blur(2px)'}],{delay:0,duration:280,easing:EASE.in}]);
+  // 2+4. gate: scales in from the circuit's centre (80-278), holds, then shrinks into the module's title icon (520-780)
+  //      one animation with offsets, so the backwards fill of a later phase can't override an earlier one
+  const gT=700, o=t=>(t-80)/gT;
+  A.push([$('gate'),[
+    {opacity:0,transform:`translate(0,0) scale(${gs})`,offset:0,easing:EASE.out},
+    {opacity:1,transform:'translate(0,0) scale(1)',offset:o(280)},
+    {opacity:1,transform:'translate(0,0) scale(1)',offset:o(520),easing:EASE.inout},
+    {opacity:1,transform:toIcon,offset:o(740)},
+    {opacity:0,transform:toIcon,offset:1}],{delay:80,duration:gT,easing:'linear'}]);
+  // 3. wires retract into the pin stubs (440-600): lead strokes shrink toward the gate body
+  leads.forEach(l=>{const L=l.getTotalLength(),out=l.classList.contains('lead-out');
+    A.push([l,[{strokeDasharray:`${L} ${L}`,strokeDashoffset:0},{strokeDasharray:`${L} ${L}`,strokeDashoffset:out?L:-L}],{delay:440,duration:160,easing:EASE.in}])});
+  // 5. module box grows around it (560-800)
+  A.push([$('module'),[{opacity:0,transform:mInv,borderRadius:'8px'},{opacity:1,transform:'scale(1)'}],{delay:560,duration:240,easing:EASE.spring}]);
+  A.push([$('module').querySelector('.micon'),[{opacity:0},{opacity:1}],{delay:740,duration:80}]);
+  // 6. pin stubs extend out of the box edge (700-860, staggered 40ms)
+  pins.forEach((p,i)=>A.push([p,[{opacity:0,transform:`translateX(${p.closest('.out')?-14:14}px)`},{opacity:1,transform:'none'}],{delay:700+i*40,duration:120,easing:EASE.out}]));
+  return A;
+}
+function run(dir,freeze){
+  document.getAnimations().forEach(a=>a.cancel());
+  const P=plan();
+  const anims=P.map(([el,kf,o])=>el.animate(kf,{...o,fill:'both',
+     direction:dir==='expand'?'reverse':'normal',
+     delay:dir==='expand'?TOTAL-(o.delay+o.duration):o.delay}));
+  if(freeze!=null){anims.forEach(a=>{a.pause();a.currentTime=freeze});$('clock').textContent=`${dir} frozen at t = ${freeze} ms`;return}
+  const t0=performance.now();(function tick(){const e=Math.min(TOTAL,performance.now()-t0);$('clock').textContent=`${dir}: t = ${Math.round(e)} ms`;if(e<TOTAL)requestAnimationFrame(tick)})();
+}
+$('collapse').onclick=()=>run('collapse');$('expand').onclick=()=>run('expand');
+$('a').onchange=$('b').onchange=()=>{draw()};
+if(matchMedia('(prefers-reduced-motion: reduce)').matches){ /* fallback: instant swap with a 150ms cross-fade */
+  run=function(dir){const show=dir==='collapse'?$('module'):$('circuit');[$('circuit'),$('gate'),$('module')].forEach(e=>e.style.opacity=e===show?1:0)};
+}
+const Q=new URLSearchParams(location.search);
+if(Q.has('t')) run(Q.get('dir')||'collapse',+Q.get('t')); else run('expand',TOTAL);  // start showing the circuit
+</script></body></html>

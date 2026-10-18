@@ -1,0 +1,60 @@
+import json
+O='/workspace/eight-bit-adder/design/parts/'
+def svg(name,vb,body,note,extra_cls=''):
+    w,h=vb
+    return (f"<svg class='part part-{name}{extra_cls}' viewBox='0 0 {w} {h}' width='{w}' height='{h}' fill='none' stroke='currentColor' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'>"
+            f"<!-- {note} -->{body}</svg>")
+# hand-drawn feel: tiny curvature on straight runs
+lead=lambda x1,y1,x2,y2,cls='lead': f"<path class='{cls}' d='M{x1} {y1} C{(2*x1+x2)/3:.1f} {y1-0.4:.1f} {(x1+2*x2)/3:.1f} {y2+0.4:.1f} {x2} {y2}'/>"
+term=lambda x,y: f"<circle class='term' cx='{x}' cy='{y}' r='2.6'/>"
+P={}
+# SWITCH: toggle lever; class 'closed' on the svg closes it (lever rotates about the hinge at (14,20))
+P['switch']=svg('switch',(60,40),
+  lead(0,20,14,20,'lead lead-a')+lead(46,20,60,20,'lead lead-b')+term(14,20)+term(46,20)+
+  "<g class='lever'><path d='M14 20 C24 19.6 34 20.4 44.5 20'/><circle class='knob' cx='45' cy='20' r='3.6'/></g>",
+  "switch. viewBox 0 0 60 40. Pins: a (0,20), b (60,20). Hinge (14,20). Add class closed to close; on = current flowing.")
+# RELAY contacts with coil: NO and NC. Contact on top row, coil below. class energized flips the contact.
+def relay(kind):
+    coil=("<path class='coil' d='M14 60 C14 54 14 52 18 50 M18 50 C18 44 24 44 24 50 C24 44 30 44 30 50 C30 44 36 44 36 50 C36 44 42 44 42 50 M42 50 C46 52 46 54 46 60'/>"
+          "<path class='link' d='M30 43 C30.4 36 29.6 30 30 24' stroke-dasharray='2 3.5' stroke-width='1.6'/>")
+    stop="<path class='stop' d='M46 10 C46.3 12 45.7 14 46 16' stroke-width='2'/>" if kind=='nc' else ''
+    body=(lead(0,20,14,20,'lead lead-a')+lead(46,20,60,20,'lead lead-b')+term(14,20)+term(46,20)+stop+
+          "<g class='lever'><path d='M14 20 C24 19.6 34 20.4 44.5 20'/></g>"+coil+term(14,60)+term(46,60))
+    return svg('relay',(60,64),body,f"relay {kind.upper()} contact with coil. viewBox 0 0 60 64. Contact pins: a (0,20), b (60,20). Coil pins: c1 (14,60), c2 (46,60). Add class energized when the coil is driven.",f" relay-{kind}")
+P['relay-no']=relay('no'); P['relay-nc']=relay('nc')
+# LAMP
+P['lamp']=svg('lamp',(60,40),
+  lead(0,20,17,20,'lead lead-a')+lead(43,20,60,20,'lead lead-b')+
+  "<circle class='glow' cx='30' cy='20' r='17' stroke='none'/><circle class='bulb' cx='30' cy='20' r='12.6'/>"
+  "<path class='filament' d='M21.4 11.6 C26 16 34 24 38.6 28.4 M38.6 11.6 C34 16 26 24 21.4 28.4'/>",
+  "lamp. viewBox 0 0 60 40. Pins: a (0,20), b (60,20). Add class on when lit.")
+# BATTERY / source
+P['battery']=svg('battery',(60,40),
+  lead(0,20,26,20,'lead lead-a')+lead(34,20,60,20,'lead lead-b')+
+  "<path class='plate' d='M26 7 C26.4 15 25.6 25 26 33'/><path class='plate' d='M34 13 C34.3 18 33.7 22 34 27' stroke-width='4'/>"
+  "<path class='sign' d='M14 8 h6 M17 5 v6 M40 8 h6' stroke-width='1.8'/>",
+  "battery / source. viewBox 0 0 60 40. Pins: + (0,20), - (60,20). Long plate = +.")
+# GROUND
+P['ground']=svg('ground',(60,40),
+  lead(30,0,30,18)+"<path d='M16 18 C24 17.6 36 18.4 44 18 M21 25 C27 24.7 33 25.3 39 25 M26 32 C28 31.8 32 32.2 34 32'/>",
+  "ground. viewBox 0 0 60 40. Pin: g (30,0).")
+# TRANSISTOR (NPN, optional)
+P['npn']=svg('npn',(60,60),
+  lead(0,30,22,30,'lead lead-b')+"<circle class='case' cx='32' cy='30' r='17'/>"
+  "<path class='base' d='M22 19 C21.6 26 22.4 34 22 41'/>"
+  "<path class='lead lead-c' d='M22 25 C28 21 34 17 40 13 L40 0'/><path class='lead lead-e' d='M22 35 C28 39 34 43 40 47 L40 60'/>"
+  "<path class='arrow' d='M33.5 39.5 L39 46.5 L30.6 45.6' stroke-width='2'/>",
+  "NPN transistor. viewBox 0 0 60 60. Pins: base (0,30), collector (40,0), emitter (40,60). Add class on when conducting.")
+# NOT, stage 1: input drives the coil of an NC relay; the NC contact feeds the lamp. Input on -> contact opens -> lamp off.
+def nest(k,x,y,cls=''):
+    return P[k].replace('<svg ',f"<svg x='{x}' y='{y}' ",1).replace("class='part ",f"class='part {cls} ".rstrip()+' ',1).replace('  ',' ')
+P['not-relay']=(
+  "<svg class='part-group part-not-relay' viewBox='0 0 140 72' width='140' height='72' fill='none' stroke-linecap='round' stroke-linejoin='round'>"
+  "<!-- NOT, stage 1 (normally-closed relay). viewBox 0 0 140 72. Pins: source + (0,20) into the NC contact; lamp out (140,20) to ground; "
+  "input (14,72) drives coil c1; coil c2 (46,72) to ground. Default string = input 0 (contact closed, lamp lit). "
+  "For input 1: add energized to svg.part-relay, remove on from svg.part-relay and svg.part-lamp and from the wire.mid, add on to the wire.in. -->"
+  "<path class='wire on mid' d='M60 20 C66 19.6 72 20.4 80 20'/><path class='wire in' d='M14 60 L14 72'/><path class='wire gnd' d='M46 60 L46 72'/>"
+  "<path class='wire on out' d='M138 20 L140 20'/>"
+  +nest('relay-nc',0,0,'on')+nest('lamp',80,0,'on')+"</svg>")
+for k,v in P.items(): open(O+k+'.svg','w').write(v.replace('<svg ',"<svg xmlns='http://www.w3.org/2000/svg' ",1))
+open(O+'parts.js','w').write("// Generated by parts-gen.py. Part SVG strings (single quotes only). Load as a classic script: window.PARTS.\n// Keys: switch, relay-no, relay-nc, lamp, battery, ground, npn, not-relay (stage-1 NOT circuit). Pins: see PINS.md.\n(function(){var PARTS="+json.dumps(P,indent=1)+";\n if(typeof window!=='undefined')window.PARTS=PARTS;\n if(typeof module!=='undefined')module.exports=PARTS;})();\n")

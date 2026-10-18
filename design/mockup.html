@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>8-bit adder: style mockup</title>
+<link rel="stylesheet" href="style.css">
+<script src="gates/gates.js"></script><script src="parts/parts.js"></script>
+</head><body>
+<h1>8-bit Ripple-Carry Adder</h1>
+<div class="tabs" role="tablist"><button class="tab" role="tab" aria-selected="false"><span class="n">1</span>Switches</button><button class="tab" role="tab" aria-selected="false"><span class="n">2</span>Gates</button><button class="tab" role="tab" aria-selected="false"><span class="n">3</span>Half adder</button><button class="tab" role="tab" aria-selected="false"><span class="n">4</span>Full adder</button><button class="tab" role="tab" aria-selected="true"><span class="n">5</span>8-bit adder</button></div>
+<div class="top">
+ <div>
+  <section class="panel" id="inputs"><h2>Inputs</h2></section>
+  <section class="panel result" id="result"><h2>Sum</h2></section>
+  <section class="panel"><h2>Ripple</h2>
+   <div class="controls">
+    <div class="seg" role="radiogroup" aria-label="Mode"><button role="radio" aria-checked="false">Instant</button><button role="radio" aria-checked="true">Slow</button><button role="radio" aria-checked="false">Step</button></div><button class="btn primary next">Next step ▸</button>
+    <label class="speed">Speed<input type="range" min="60" max="800" value="540"><span><i>slower</i><i>260 ms / bit</i><i>faster</i></span></label>
+   </div>
+  </section>
+ </div>
+ <div><section class="panel"><h2>Carry chain <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:700">bit 7 … bit 0</span></h2>
+  <div class="chain row" id="chain"></div>
+ </section>
+<div class="detail-row">
+ <section class="panel"><h2>Full adder, bit 5 <span class="muted" style="text-transform:none;letter-spacing:0">(A=1, B=1, Cin=1)</span></h2><div class="detail" id="fa-detail"></div></section>
+ <section class="panel"><h2>Half adder <span class="muted" style="text-transform:none;letter-spacing:0">(A=1, B=1)</span></h2><div class="detail compact" id="ha-detail"></div></section>
+</div>
+<section class="panel"><h2>Levels: AND <span class="muted" style="text-transform:none;letter-spacing:0">(A=1, B=1)</span></h2><div class="levels" id="levels"></div></section>
+<section class="panel"><h2>Modules</h2><div id="modules" style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start"></div></section>
+</div></div>
+<footer>Every wire and gate lights amber when it carries a 1. The carry ripples from bit 0 to bit 7.</footer>
+<script>
+const A=0b10110101, B=0b01101110, CIN=0;
+const bit=(v,i)=>(v>>i)&1;
+const c=[CIN],s=[];for(let i=0;i<8;i++){const a=bit(A,i),b=bit(B,i);s[i]=a^b^c[i];c[i+1]=(a&b)|(c[i]&(a^b))}
+const sum=s.reduce((t,v,i)=>t|(v<<i),0);
+const on=v=>v?' on':'';
+// inputs
+const coins=(v,name)=>`<div class="operand"><div class="name">${name}</div><div class="bits labeled">`+[...Array(8)].map((_,k)=>{const i=7-k;return `<button class="bit${on(bit(v,i))}" aria-pressed="${!!bit(v,i)}" aria-label="${name} bit ${i}">${bit(v,i)}<span class="idx">${i}</span></button>`}).join('')+`</div></div>`;
+document.getElementById('inputs').innerHTML+=coins(A,'A')+coins(B,'B')+`<div class="operand"><div class="name">Cin</div><div class="bits" style="justify-content:flex-end"><button class="bit${on(CIN)}" aria-pressed="${!!CIN}" style="flex:0 0 48px">${CIN}</button></div></div>`;
+// result
+const binHtml=[...Array(8)].map((_,k)=>s[7-k]?'<b>1</b>':'<i>0</i>').join('');
+document.getElementById('result').innerHTML+=`<div class="bin"><span>${binHtml}</span></div>`+
+ `<div class="dec"><span class="op">${A}</span> + <span class="op">${B}</span> + <span class="cin">Cin ${CIN}</span> = <strong>${A+B+CIN}</strong> → 8-bit <strong>${sum}</strong></div><div class="lights"><span class="light${on(c[8])}">CARRY OUT</span><span class="light warn${on(c[8]^c[7])}">OVERFLOW (signed)</span></div>`;
+// chain (DOM order: Cout link, bit7, link c7, ..., bit0, Cin link)
+const RIP=5; // illustrate a mid-ripple highlight on the carry into bit 5
+const link=(k,cls='')=>`<div class="link"><svg class="v" width="4" height="24"><line class="carry${on(c[k])}${k===RIP?' rippling':''}" x1="2" y1="0" x2="2" y2="24"/></svg><svg class="h" width="22" height="4"><line class="carry${on(c[k])}${k===RIP?' rippling':''}" x1="0" y1="2" x2="22" y2="2"/></svg><span class="clbl${on(c[k])}">c${k}=${c[k]}</span></div>`;
+let ch=link(8);
+for(let i=7;i>=0;i--){
+  ch+=`<div class="fa${i===RIP?' active':''}" ${i===RIP?'aria-expanded="true"':''}><div class="idx">${i}</div><div class="io"><span><i class="dot${on(bit(A,i))}"></i>A</span><span><i class="dot${on(bit(B,i))}"></i>B</span><span><i class="dot${on(c[i])}"></i>Cin</span></div><div class="out"><div class="s${on(s[i])}">S ${s[i]}</div><div class="co${on(c[i+1])}">C ${c[i+1]}</div></div></div>`;
+  ch+=link(i);
+}
+document.getElementById('chain').innerHTML=ch;
+// gate placement helper
+const G=(k,x,y,isOn,la,lb)=>{let g=GATES[k].replace("<svg ",`<svg x='${x}' y='${y}' `).replace("class='gate ",`class='gate${isOn?' on':''} `);
+  if(la)g=g.replace("class='lead lead-a'","class='lead lead-a on'"); if(lb)g=g.replace("class='lead lead-b'","class='lead lead-b on'"); return g};
+const W=(d,v)=>`<path class="wire${on(v)}" d="${d}"/>`, P=(x,y,v)=>`<circle class="pin${on(v)}" cx="${x}" cy="${y}" r="4"/>`, L=(x,y,t,v,a='start')=>`<text class="lbl${on(v)}" x="${x}" y="${y}" text-anchor="${a}">${t}</text>`;
+// full adder bit 5
+const a=bit(A,RIP),b=bit(B,RIP),ci=c[RIP],x1=a^b,a1=a&b,x2=x1^ci,a2=x1&ci,o=a1|a2;
+document.getElementById('fa-detail').innerHTML=`<svg viewBox="0 0 340 165">
+${W('M18 32 H60',a)}${W('M42 32 V102 H60',a)}${W('M18 48 H60',b)}${W('M30 48 V118 H60',b)}
+${W('M18 142 H148 V68 H160',ci)}${W('M148 128 H160',ci)}
+${W('M120 40 H136 V52 H160',x1)}${W('M136 52 V112 H160',x1)}
+${W('M120 110 H126 V155 H232 V128 H240',a1)}${W('M220 120 H230 V112 H240',a2)}
+${W('M220 60 H312',x2)}${W('M300 120 H312',o)}
+${G('xor',60,20,x1,a,b)}${G('and',60,90,a1,a,b)}${G('xor',160,40,x2,x1,ci)}${G('and',160,100,a2,x1,ci)}${G('or',240,100,o,a2,a1)}
+${P(14,32,a)}${P(14,48,b)}${P(14,142,ci)}${P(316,60,x2)}${P(316,120,o)}
+${L(4,24,'A',a)}${L(4,62,'B',b)}${L(4,134,'Cin',ci)}${L(336,52,'Sum',x2,'end')}${L(336,112,'Cout',o,'end')}
+${L(90,16,'XOR',x1,'middle')}${L(90,86,'AND',a1,'middle')}${L(190,36,'XOR',x2,'middle')}${L(190,96,'AND',a2,'middle')}${L(270,96,'OR',o,'middle')}
+</svg>`;
+// half adder A=1,B=1
+const ha=1,hb=1;
+document.getElementById('ha-detail').innerHTML=`<svg viewBox="0 0 200 120">
+${W('M18 32 H70',ha)}${W('M44 32 V82 H70',ha)}${W('M18 48 H70',hb)}${W('M32 48 V98 H70',hb)}
+${W('M130 40 H182',ha^hb)}${W('M130 90 H182',ha&hb)}
+${G('xor',70,20,ha^hb,ha,hb)}${G('and',70,70,ha&hb,ha,hb)}
+${P(14,32,ha)}${P(14,48,hb)}${P(186,40,ha^hb)}${P(186,90,ha&hb)}
+${L(4,24,'A',ha)}${L(4,64,'B',hb)}${L(198,32,'Sum',ha^hb,'end')}${L(198,82,'Carry',ha&hb,'end')}
+${L(100,16,'XOR',ha^hb,'middle')}${L(100,66,'AND',ha&hb,'middle')}
+</svg>`;
+
+// levels strip
+const at=(k,x,y,cls='')=>PARTS[k].replace('<svg ',`<svg x='${x}' y='${y}' `).replace("class='part ",`class='part ${cls} `);
+const gAnd=GATES.and.replace("class='gate ","class='gate on ").replace("class='lead lead-a'","class='lead lead-a on'").replace("class='lead lead-b'","class='lead lead-b on'");
+const icon=(g,on1)=>`<svg class="micon gate${on1?' on':''}" viewBox="0 0 60 40" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${g.replace(/^<svg[^>]*>/,'').replace(/<\/svg>$/,'')}</svg>`;
+const mod=(title,ins,outs,g,inner,exp)=>`<div class="module${outs.some(o=>o[1])?' on':''}${exp?' expanded':''}"><div class="mpins in">${ins.map(([n,v])=>`<div class="mpin${on(v)}"><span>${n}</span></div>`).join('')}</div>
+ <div class="mtitle">${g?icon(g,1):''}${title}<button class="mexp" aria-expanded="${!!exp}" aria-label="${exp?'Collapse':'Expand'} ${title}"></button></div>
+ <div class="mpins out">${outs.map(([n,v])=>`<div class="mpin${on(v)}"><span>${n}</span></div>`).join('')}</div>${inner?`<div class="minner">${inner}</div>`:''}</div>`;
+document.getElementById('levels').innerHTML=`<div class="lv"><svg class="lv-circuit" viewBox="0 0 420 110" width="100%"><path class="wire on flow" d="M80 20 H120"/><path class="wire on flow" d="M180 20 H200"/><path class="wire on flow" d="M260 20 H300"/><path class="wire on flow" d="M360 20 H395 V90 H8 V20 H20"/>${at('battery',20,0,'on')}${at('switch',120,0,'on closed')}${at('switch',200,0,'on closed')}${at('lamp',300,0,'on')}</svg><small>1 · switches in series</small></div>
+ <div class="arrow">→</div><div class="lv">${gAnd.replace("width='60' height='40'","width='90' height='60'")}<small>2 · AND gate</small></div>
+ <div class="arrow">→</div><div class="lv">${mod('AND',[['A',1],['B',1]],[['Y',1]],gAnd)}<small>3 · module</small></div>`;
+// modules: a collapsed half adder and an expanded full adder (bit 5)
+const faInner=document.getElementById('fa-detail').innerHTML;
+document.getElementById('modules').innerHTML=mod('Half adder',[['A',1],['B',1]],[['S',0],['C',1]],null)+
+  mod('Full adder · bit 5',[['A',1],['B',1],['Cin',1]],[['S',1],['Cout',1]],null,faInner,true);
+</script></body></html>

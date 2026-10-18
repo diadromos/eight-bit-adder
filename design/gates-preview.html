@@ -1,0 +1,10 @@
+<html><head><link rel="stylesheet" href="style.css"><script src="gates/gates.js"></script>
+<style>body{padding:16px}.g{display:grid;grid-template-columns:80px repeat(4,170px);gap:12px;align-items:center}.c{background:var(--card);border-radius:16px;padding:14px;text-align:center}.c svg{width:150px;height:100px}.h{font-weight:800;color:var(--muted)}</style></head><body>
+<div class="g" id="g"></div><p class="muted" style="font-size:12px">NOT: off row = input 1 (output 0); on row = input 0 (output 1).</p><script>
+let h='<div></div>'+['AND','OR','XOR','NOT'].map(n=>`<div class="h" style="text-align:center">${n}</div>`).join('');
+for(const st of ['off','on','partial']){h+=`<div class="h">${st=='partial'?'A=1 only':st}</div>`;for(const k of ['and','or','xor','not']){let s=GATES[k];
+ if(k=='not'){ if(st=='off')s=s.replace("class='lead lead-a'","class='lead lead-a on'"); if(st=='on')s=s.replace("class='gate ","class='gate on "); if(st=='partial')s='<span class=h>n/a</span>'; h+=`<div class="c">${s}</div>`; continue }
+ if(st=='on')s=s.replace("class='gate ","class='gate on ").replace("class='lead lead-a'","class='lead lead-a on'").replace("class='lead lead-b'","class='lead lead-b on'");
+ if(st=='partial'){s=s.replace("class='lead lead-a'","class='lead lead-a on'");if(k!='and')s=s.replace("class='gate ","class='gate on ")}
+ h+=`<div class="c">${s}</div>`}}
+document.getElementById('g').innerHTML=h;</script></body></html>

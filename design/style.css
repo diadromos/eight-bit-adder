@@ -1,0 +1,280 @@
+/* 8-bit ripple-carry adder: visual style.
+   Same palette/fonts/panels/pills/toggles as natural-selection/design/mobile.css.
+   Signal colors: 0 = muted slate, 1 = warm amber with glow. (The theme green stays the UI accent,
+   e.g. selected nav, primary button, so "logic 1" never gets confused with "selected".) */
+:root{
+  --bg:#1b1d22; --card:#262931; --card2:#30343e; --inset:#1d1f25; --ink:#f1efe9; --muted:#a7a9b1;
+  --accent:#7fd4a8; --accent-ink:#10251a; --ring:rgba(127,212,168,.45);
+  --shadow:0 2px 0 rgba(0,0,0,.35),0 6px 16px rgba(0,0,0,.28);
+  --r:999px; --tap:44px;
+  --font:"Nunito","Quicksand","Varela Round","SF Pro Rounded",ui-rounded,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  /* logic levels */
+  --wire-0:#4f5767;            /* muted slate */
+  --wire-1:#ffc247;            /* warm amber */
+  --glow-1:rgba(255,194,71,.65);
+  --gate-fill-0:#262a33; --gate-fill-1:#4a3a17;
+  --pin-0:#3a404c;
+  --carry-1:#ffc247;
+  --t:120ms;                   /* signal transition */
+  --ripple-step:220ms;         /* per-bit ripple delay (slow mode can raise it) */
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);
+  padding:12px 12px calc(84px + env(safe-area-inset-bottom));max-width:1320px;margin-inline:auto}
+h1{font-size:22px;font-weight:800;margin:6px 4px 10px;letter-spacing:-.01em}
+h2{font-size:15px;font-weight:800;margin:0 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.panel{background:var(--card);border-radius:22px;padding:14px;box-shadow:var(--shadow);margin:0 0 12px}
+.muted{color:var(--muted)}
+
+/* ---------- SVG signal classes ---------- */
+.wire,.carry{fill:none;stroke:var(--wire-0);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;
+  transition:stroke var(--t) ease,filter var(--t) ease}
+.wire.on,.carry.on{stroke:var(--wire-1);filter:drop-shadow(0 0 3px var(--glow-1))}
+.gate{color:var(--wire-0);transition:color var(--t) ease,filter var(--t) ease;overflow:visible}
+.gate .body{fill:var(--gate-fill-0);transition:fill var(--t) ease}
+.gate .lead{transition:stroke var(--t) ease}
+.gate .lead.on{stroke:var(--wire-1)}
+.gate.on{color:var(--wire-1);filter:drop-shadow(0 0 4px var(--glow-1))}
+.gate.on .body{fill:var(--gate-fill-1)}
+.gate.on .lead:not(.on){stroke:var(--wire-0)}   /* inputs keep their own level */
+.gate.on .lead.lead-out{stroke:var(--wire-1)}   /* output follows the gate */
+.pin{fill:var(--pin-0);stroke:var(--wire-0);stroke-width:2;transition:fill var(--t),stroke var(--t),filter var(--t)}
+.pin.on{fill:var(--wire-1);stroke:var(--wire-1);filter:drop-shadow(0 0 3px var(--glow-1))}
+.lbl{font:700 11px var(--font);fill:var(--muted)}
+.lbl.on{fill:var(--wire-1)}
+
+/* carry "current flow" while rippling */
+.carry.rippling{stroke:var(--wire-1);stroke-dasharray:5 9;animation:flow 480ms linear infinite;
+  filter:drop-shadow(0 0 4px var(--glow-1))}
+@keyframes flow{to{stroke-dashoffset:-28}}
+
+/* ---------- bit toggles (coins) ---------- */
+.operand{display:grid;grid-template-columns:1fr;gap:4px;margin:6px 0 8px}
+.operand>.name{font:800 13px var(--font);color:var(--muted);letter-spacing:.06em}
+.bits{display:flex;gap:3px;justify-content:space-between;min-width:0}
+.bits .nib{width:6px}                                   /* optional spacer between nibbles */
+.bit{appearance:none;border:0;cursor:pointer;flex:1 1 0;min-width:0;max-width:52px;height:48px;border-radius:var(--r);
+  font:800 18px var(--mono);color:var(--muted);background:var(--card2);position:relative;
+  box-shadow:inset 0 -3px 0 rgba(0,0,0,.35),0 2px 6px rgba(0,0,0,.3);
+  transition:background var(--t),color var(--t),box-shadow var(--t),transform 80ms;touch-action:manipulation}
+.bit::after{content:"";position:absolute;inset:-2px -1.5px}  /* hit area spans the gaps: ~42x52 on a 390px phone */
+.bit .idx{position:absolute;left:0;right:0;bottom:-15px;font:700 9px var(--font);color:#6f7380;pointer-events:none}
+.bit.on,.bit[aria-pressed=true]{background:var(--wire-1);color:#2b1d00;
+  box-shadow:inset 0 -3px 0 rgba(120,70,0,.45),0 0 12px var(--glow-1)}
+.bit:active{transform:translateY(2px) scale(.96);box-shadow:inset 0 -1px 0 rgba(0,0,0,.35)}
+.bit:focus-visible{outline:none;box-shadow:0 0 0 3px var(--ring)}
+.bits.labeled{padding-bottom:14px}
+
+/* ---------- buttons, slider, toggle (from mobile.css) ---------- */
+.btn{font:700 15px/1 var(--font);min-height:var(--tap);padding:0 18px;border:0;border-radius:var(--r);
+  background:var(--card2);color:var(--ink);box-shadow:var(--shadow);cursor:pointer;transition:transform .12s,box-shadow .12s,filter .12s}
+.btn:active{transform:translateY(2px) scale(.98);box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent;box-shadow:inset 0 0 0 2px var(--card2)}
+.btn[aria-pressed=true]{background:rgba(127,212,168,.16);color:var(--accent);box-shadow:inset 0 0 0 2px var(--ring)}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.speed{display:flex;flex-direction:column;gap:2px;flex:1 1 100%;font-weight:700;font-size:14px}
+.speed span{display:flex;justify-content:space-between;color:var(--muted);font-size:12px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:var(--tap);margin:0;background:transparent;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:14px;border-radius:var(--r);background:var(--inset);box-shadow:inset 0 1px 3px rgba(0,0,0,.5)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:30px;height:30px;margin-top:-8px;border-radius:50%;background:#fff;border:3px solid var(--accent);box-shadow:0 3px 8px rgba(0,0,0,.4)}
+input[type=range]::-moz-range-track{height:14px;border-radius:var(--r);background:var(--inset)}
+input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:#fff;border:3px solid var(--accent)}
+.switch{display:inline-flex;align-items:center;gap:10px;min-height:var(--tap);font-weight:700}
+.switch input{-webkit-appearance:none;appearance:none;width:50px;height:30px;margin:0;border-radius:var(--r);background:#41454f;position:relative;cursor:pointer;transition:background .2s;box-shadow:inset 0 2px 4px rgba(0,0,0,.4)}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:transform .2s cubic-bezier(.3,1.4,.6,1)}
+.switch input:checked{background:var(--accent)}
+.switch input:checked::after{transform:translateX(20px)}
+
+/* ---------- result ---------- */
+.result{display:flex;flex-direction:column;gap:6px}
+.result .bin{font:800 26px/1.1 var(--mono);letter-spacing:.06em;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.result .bin b{color:var(--wire-1);font-weight:800}       /* 1-bits */
+.result .bin i{font-style:normal;color:var(--wire-0)}     /* 0-bits */
+.result .dec{font:700 16px var(--font);color:var(--muted)}
+.result .dec strong{color:var(--ink);font-size:22px}
+.flag{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:var(--r);font:800 12px var(--font);
+  background:var(--inset);color:var(--muted);letter-spacing:.04em}
+.flag::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--wire-0)}
+.flag.on{background:rgba(255,194,71,.14);color:var(--wire-1);box-shadow:inset 0 0 0 1.5px rgba(255,194,71,.5)}
+.flag.on::before{background:var(--wire-1);box-shadow:0 0 8px var(--glow-1)}
+
+/* ---------- full-adder cards + chain ---------- */
+.chain{display:flex;flex-direction:column;gap:0;position:relative}
+.fa{display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:10px;background:var(--card2);border-radius:18px;
+  padding:8px 12px 8px 8px;min-height:56px;position:relative;transition:box-shadow var(--t),background var(--t)}
+.fa .idx{width:36px;height:36px;border-radius:12px;background:var(--inset);display:grid;place-items:center;font:800 13px var(--mono);color:var(--muted)}
+.fa .io{display:flex;gap:10px;font:700 12px var(--font);color:var(--muted)}
+.fa .io span{display:inline-flex;align-items:center;gap:4px}
+.fa .dot{width:12px;height:12px;border-radius:50%;background:var(--pin-0);box-shadow:inset 0 0 0 2px var(--wire-0)}
+.fa .dot.on{background:var(--wire-1);box-shadow:0 0 6px var(--glow-1)}
+.fa .out{display:flex;gap:6px}
+.fa .s,.fa .co{min-width:44px;height:32px;border-radius:var(--r);display:grid;place-items:center;font:800 13px var(--mono);
+  background:var(--inset);color:var(--muted)}
+.fa .s.on,.fa .co.on{background:rgba(255,194,71,.16);color:var(--wire-1);box-shadow:inset 0 0 0 1.5px rgba(255,194,71,.5)}
+.fa.active{box-shadow:0 0 0 2px var(--wire-1),0 0 18px rgba(255,194,71,.25)}
+.fa.pulse{animation:fapulse 420ms ease-out}
+@keyframes fapulse{0%{box-shadow:0 0 0 0 rgba(255,194,71,.7)}60%{box-shadow:0 0 0 6px rgba(255,194,71,.25)}100%{box-shadow:0 0 0 2px var(--wire-1)}}
+.fa[aria-expanded=true]{background:#353a46}
+.link{height:24px;margin-left:24px;position:relative}  /* carry segment between rows (vertical spine) */
+.link svg{display:block;overflow:visible}
+.link .h{display:none}
+.link .clbl{position:absolute;left:16px;top:4px;font:700 10px var(--mono);color:var(--muted)}
+.link .clbl.on{color:var(--wire-1)}
+.detail{background:var(--inset);border-radius:18px;padding:10px;margin:6px 0 2px}
+.detail svg{width:100%;height:auto;display:block;max-height:320px}
+.detail.compact svg{max-width:250px;margin:0 auto}
+
+/* ---------- nav + footer ---------- */
+.nav{display:flex;gap:6px;padding:6px;background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);margin:0 0 12px;overflow-x:auto}
+.nav a{flex:1 0 auto;min-height:var(--tap);display:flex;align-items:center;justify-content:center;padding:0 10px;border-radius:var(--r);
+  font:700 14px var(--font);color:var(--muted);text-decoration:none}
+.nav a:hover{background:var(--card2);color:var(--ink)}
+.nav a[aria-current=page],.nav a.active{background:rgba(127,212,168,.16);color:var(--accent);font-weight:800}
+footer{margin:16px 0 0;padding:14px;border-radius:18px;background:var(--card);color:var(--muted);font-size:13px;text-align:center}
+
+/* ---------- desktop ---------- */
+@media (min-width:900px){
+  body{padding:20px 28px 28px}
+  .top{display:grid;grid-template-columns:minmax(340px,400px) minmax(0,1fr);gap:16px;align-items:start}
+  .operand{grid-template-columns:28px 1fr;align-items:center;gap:8px}
+  .operand>.name{font-size:16px;text-align:center}
+  .chain.row{flex-direction:row;align-items:stretch;gap:0}   /* DOM order bit7..bit0, so bit 0 sits at the right */
+  .chain.row .fa{grid-template-columns:1fr;justify-items:center;text-align:center;padding:10px 4px;gap:8px;flex:1 1 0;min-width:0}
+  .chain.row .fa .out{flex-direction:column;gap:4px}
+  .chain.row .fa .s,.chain.row .fa .co{min-width:40px;height:26px;font-size:12px}
+  .chain.row .fa .io{flex-direction:column;gap:4px}
+  .chain.row .link{height:auto;width:22px;flex:0 0 22px;margin:0;display:flex;align-items:center;justify-content:center}
+  .chain.row .link .v{display:none} .chain.row .link .h{display:block}
+  .chain.row .link .clbl{left:-2px;top:calc(50% + 8px);font-size:9px}
+  .detail-row{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+}
+
+
+/* ---------- parts (switch, relay, lamp, battery, ground, npn) ---------- */
+.part{color:var(--wire-0);overflow:visible;transition:color var(--t),filter var(--t)}
+.part .term{fill:var(--card)}
+.part.on{color:var(--wire-1);filter:drop-shadow(0 0 3px var(--glow-1))}
+.part .lead.on{stroke:var(--wire-1)}
+.part .lever{transform-box:view-box;transform-origin:14px 20px;transform:rotate(-28deg);
+  transition:transform 180ms cubic-bezier(.3,1.5,.6,1)}
+.part-switch{cursor:pointer;touch-action:manipulation}
+.part-switch .knob{fill:var(--card2)}
+.part-switch.closed .lever,.part-switch[aria-checked=true] .lever{transform:none}
+.part-switch.on .knob{fill:var(--wire-1)}
+.part-switch:focus-visible{outline:none;filter:drop-shadow(0 0 0 3px var(--ring))}
+button.switch-btn{appearance:none;border:0;background:none;padding:2px;min-width:var(--tap);min-height:var(--tap);border-radius:14px;cursor:pointer}
+button.switch-btn:active .lever{transform:rotate(-14deg)}
+button.switch-btn:focus-visible{outline:none;box-shadow:0 0 0 3px var(--ring)}
+.relay-nc .lever,.relay-no.energized .lever{transform:none}
+.relay-nc.energized .lever{transform:rotate(-28deg)}
+.part-relay .coil,.part-relay .link{transition:stroke var(--t)}
+.part-relay:not(.energized) .coil,.part-relay:not(.energized) .link{stroke:var(--wire-0)}
+.part-relay.energized .coil{stroke:var(--wire-1)}
+.part-relay.energized .link{stroke:var(--wire-1)}
+.part-lamp .glow{fill:transparent;transition:fill var(--t)}
+.part-lamp .bulb{fill:var(--gate-fill-0);transition:fill var(--t)}
+.part-lamp.on .glow{fill:rgba(255,194,71,.22)}
+.part-lamp.on .bulb{fill:#6a4c12}
+.part-lamp.on .filament{stroke:#fff1c2}
+.part-lamp.on{filter:drop-shadow(0 0 8px rgba(255,194,71,.8))}
+.part-battery{color:#c9ccd4}
+.part-battery .sign{stroke:var(--muted)}
+.part-npn.on .base,.part-npn.on .lead-c,.part-npn.on .lead-e,.part-npn.on .arrow{stroke:var(--wire-1)}
+
+/* current flow: animated dashes along live wires (direction = path direction) */
+.wire.on.flow,.part.on .lead.flow{stroke-dasharray:6 8;animation:flow 520ms linear infinite}
+.flow-back{animation-direction:reverse!important}
+
+/* ---------- module box (packaged circuit with pins) ---------- */
+.module{position:relative;display:inline-grid;grid-template-columns:auto 1fr auto;align-items:stretch;min-width:180px;
+  background:var(--card2);border-radius:18px;box-shadow:var(--shadow);margin:0 18px;vertical-align:top;
+  transition:box-shadow var(--t)}
+.module>.mtitle{grid-column:2;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 6px;
+  font:800 14px var(--font);letter-spacing:.02em}
+.module .micon{width:36px;height:24px;color:var(--wire-0)}
+.module .mpins{display:flex;flex-direction:column;justify-content:space-evenly;gap:6px;padding:8px 0}
+.module .mpins.in{grid-column:1;margin-left:-18px}
+.module .mpins.out{grid-column:3;margin-right:-18px}
+.mpin{position:relative;display:flex;align-items:center;gap:5px;height:22px;font:800 11px var(--mono);color:var(--muted)}
+.mpins.out .mpin{flex-direction:row-reverse}
+.mpin::before{content:"";width:18px;height:4px;border-radius:2px;background:var(--wire-0);transition:background var(--t),box-shadow var(--t)}
+.mpin::after{content:"";position:absolute;width:10px;height:10px;border-radius:50%;background:var(--inset);
+  box-shadow:inset 0 0 0 2px var(--wire-0);left:13px}                    /* notch on the card edge */
+.mpins.out .mpin::after{left:auto;right:13px}
+.mpin>span{padding-left:6px}
+.mpins.out .mpin>span{padding:0 6px 0 0}
+.mpin.on{color:var(--wire-1)}
+.mpin.on::before{background:var(--wire-1);box-shadow:0 0 6px var(--glow-1)}
+.mpin.on::after{background:var(--wire-1);box-shadow:0 0 6px var(--glow-1)}
+.mexp{appearance:none;border:0;cursor:pointer;display:inline-flex;align-items:center;gap:4px;height:28px;min-width:44px;padding:0 10px;
+  border-radius:var(--r);background:var(--inset);color:var(--muted);font:800 12px var(--font)}
+.mexp::after{content:"";width:7px;height:7px;border-right:2.5px solid currentColor;border-bottom:2.5px solid currentColor;
+  transform:rotate(45deg) translate(-2px,-2px);transition:transform 160ms}
+.mexp[aria-expanded=true]{color:var(--accent);background:rgba(127,212,168,.14)}
+.mexp[aria-expanded=true]::after{transform:rotate(-135deg) translate(-2px,-2px)}
+.module .minner{grid-column:1/-1;display:none;margin:0 10px 10px;padding:10px;border-radius:14px;background:var(--inset);
+  box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
+.module.expanded .minner,.module:has(> .mtitle .mexp[aria-expanded=true]) .minner{display:block}
+.module .minner svg{display:block;width:100%;height:auto}
+.module.on{box-shadow:var(--shadow),0 0 0 1.5px rgba(255,194,71,.45)}
+
+/* levels strip: switch circuit -> gate -> module */
+.levels{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:center;gap:6px}
+.levels .lv{background:var(--inset);border-radius:16px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.levels .lv small{color:var(--muted);font-weight:700;font-size:11px}
+.levels .arrow{color:var(--muted);font-weight:800}
+.levels svg{max-width:100%;height:auto}
+@media (max-width:899px){.levels{grid-template-columns:1fr}.levels .arrow{justify-self:center;transform:rotate(90deg)}.levels .lv-circuit{width:100%}.levels .lv>.gate{width:90px;height:60px}}
+
+
+/* ---------- stage tabs (pill tab bar) ---------- */
+.tabs{display:flex;gap:4px;padding:5px;background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);margin:0 0 12px;
+  overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab,[role=tab]{appearance:none;border:0;cursor:pointer;flex:1 0 auto;min-height:var(--tap);padding:0 12px;border-radius:var(--r);
+  background:transparent;color:var(--muted);font:700 13px var(--font);white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  transition:background var(--t),color var(--t)}
+.tab .n{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:var(--inset);font:800 11px var(--mono)}
+.tab:hover,[role=tab]:hover{background:var(--card2);color:var(--ink)}
+.tab[aria-selected=true],[role=tab][aria-selected=true],.tab.active{background:rgba(127,212,168,.16);color:var(--accent);font-weight:800;
+  box-shadow:inset 0 0 0 2px var(--ring)}
+.tab[aria-selected=true] .n,.tab.active .n{background:var(--accent);color:var(--accent-ink)}
+.tab:focus-visible,[role=tab]:focus-visible{outline:none;box-shadow:0 0 0 3px var(--ring)}
+
+/* ---------- segmented control (Instant / Slow / Step) ---------- */
+.seg{display:inline-flex;padding:4px;gap:2px;border-radius:var(--r);background:var(--inset);box-shadow:inset 0 2px 4px rgba(0,0,0,.45)}
+.seg>button,.seg>label{appearance:none;border:0;cursor:pointer;min-height:40px;min-width:64px;padding:0 14px;border-radius:var(--r);
+  background:transparent;color:var(--muted);font:700 14px var(--font);display:inline-flex;align-items:center;justify-content:center;
+  transition:background var(--t),color var(--t),box-shadow var(--t)}
+.seg>label>input{position:absolute;opacity:0;pointer-events:none}
+.seg>button[aria-pressed=true],.seg>button[aria-checked=true],.seg>label:has(input:checked){background:var(--card2);color:var(--ink);
+  box-shadow:0 2px 0 rgba(0,0,0,.35),0 3px 8px rgba(0,0,0,.3),inset 0 0 0 2px var(--ring)}
+.seg>button:focus-visible,.seg>label:has(input:focus-visible){outline:none;box-shadow:0 0 0 3px var(--ring)}
+.btn.next:disabled{opacity:.45;cursor:default;box-shadow:none}
+/* speed slider: left = slower. Use labels "slow ... fast" and map value -> delay = max - value. */
+
+/* ---------- indicator lights (Carry out / Overflow) ---------- */
+.lights{display:flex;flex-wrap:wrap;gap:8px}
+.light{display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 12px 0 8px;border-radius:var(--r);background:var(--inset);
+  color:var(--muted);font:800 12px var(--font);letter-spacing:.04em}
+.light::before{content:"";width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#59606e,#2c3038);
+  box-shadow:inset 0 0 0 1.5px #1a1c21;transition:background var(--t),box-shadow var(--t)}
+.light.on{color:var(--wire-1)}
+.light.on::before{background:radial-gradient(circle at 35% 35%,#fff3c4,var(--wire-1) 55%,#c98a10);box-shadow:0 0 10px var(--glow-1)}
+.light.warn.on{color:#ff8a7a}
+.light.warn.on::before{background:radial-gradient(circle at 35% 35%,#ffd9d2,#ff6b57 55%,#b8321f);box-shadow:0 0 10px rgba(255,107,87,.6)}
+/* decimal line: A + B + Cin = result */
+.dec .op{color:var(--ink);font-weight:800}
+.dec .cin{color:var(--muted)}
+
+/* ---------- reduced motion ---------- */
+@media (prefers-reduced-motion:reduce){
+  *{transition-duration:1ms!important}
+  .carry.rippling{animation:none;stroke-dasharray:none}
+  .wire.on.flow,.part.on .lead.flow{animation:none;stroke-dasharray:none}
+  .part .lever{transition:none}
+  .fa.pulse{animation:none}
+}

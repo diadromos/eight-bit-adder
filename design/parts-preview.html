@@ -1,0 +1,30 @@
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="style.css"><script src="parts/parts.js"></script>
+<style>body{padding:16px}.g{display:grid;grid-template-columns:90px repeat(7,1fr);gap:10px;align-items:center}.c{background:var(--card);border-radius:16px;padding:10px;display:grid;place-items:center;height:110px}.c svg{width:96px;height:auto}.lbl{color:var(--muted);font-weight:700;font-size:12px}.h{font-weight:800;color:var(--muted);font-size:12px;text-align:center}</style></head><body>
+<div class="g" id="g"></div><script>
+const K=['switch','relay-no','relay-nc','lamp','battery','ground','npn'];
+let h='<div></div>'+K.map(k=>`<div class="h">${k}</div>`).join('');
+const st={off:s=>s,on:s=>s.replace("class='part ","class='part on ").replace("part-switch","part-switch closed").replace("relay relay-","relay energized relay-")};
+for(const n of ['off','on']){h+=`<div class="h">${n=='on'?'on / closed / energized':'off / open'}</div>`;for(const k of K){let s=PARTS[k];
+ if(n=='on'){s=s.replace("class='part ","class='part on ");if(k=='switch')s=s.replace("part-switch","part-switch closed");if(k.startsWith('relay'))s=s.replace("class='part on part-relay","class='part "+(k=='relay-no'?'on ':'')+"part-relay energized")}
+ h+=`<div class="c">${s}</div>`}}
+document.getElementById('g').innerHTML=h;
+</script>
+<h2 style="margin-top:18px">Flow: AND as two switches in series (both closed: lamp lit, dashes moving)</h2>
+<div class="panel" id="and"></div>
+<script>
+const at=(k,x,y,cls='')=>PARTS[k].replace('<svg ',`<svg x='${x}' y='${y}' `).replace("class='part ",`class='part ${cls} `);
+document.getElementById('and').innerHTML=`<svg viewBox="0 0 420 110" style="width:100%;max-width:640px">
+<path class="wire on flow" d="M80 20 H120"/><path class="wire on flow" d="M180 20 H200"/><path class="wire on flow" d="M260 20 H300"/><path class="wire on flow" d="M360 20 H395 V90 H8 V20 H20"/>
+${at('battery',20,0,'on')}
+${at('switch',120,0,'on closed')}${at('switch',200,0,'on closed')}${at('lamp',300,0,'on')}
+<text class="lbl on" x="150" y="52" text-anchor="middle">A</text><text class="lbl on" x="230" y="52" text-anchor="middle">B</text><text class="lbl on" x="330" y="52" text-anchor="middle">lamp = A AND B</text>
+</svg>`;
+</script>
+<h2 style="margin-top:14px">NOT, stage 1: NC relay feeding a lamp (input 0 → lamp lit; input 1 → coil pulls the contact open, lamp off)</h2>
+<div class="panel" style="display:flex;gap:30px;align-items:center" id="not"></div>
+<script>
+const n0=PARTS['not-relay'];
+const n1=n0.replace("class='part on part-relay relay-nc'","class='part part-relay relay-nc energized'").replace("class='part on part-lamp'","class='part part-lamp'")
+ .replace("class='wire on mid'","class='wire mid'").replace("class='wire on out'","class='wire out'").replace("class='wire in'","class='wire on in'");
+document.getElementById('not').innerHTML=`<div style="text-align:center">${n0.replace("width='140' height='72'","width='210' height='108'")}<div class="lbl">input 0 → lamp ON</div></div><div style="text-align:center">${n1.replace("width='140' height='72'","width='210' height='108'")}<div class="lbl">input 1 → lamp OFF</div></div>`;
+</script></body></html>
