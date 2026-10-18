@@ -1,5 +1,5 @@
 {
-  "_format": "Keys are CSS ids. A key with * is a pattern: * stands for one id segment with no dash (for example a part id like relay3 or inA). Look up the exact key first, then the most specific pattern. Not loaded by the ladder code yet.",
+  "_format": "Keys are CSS ids. A key with * is a pattern: * stands for one id segment with no dash (for example a part id like relay3 or inA). Look up the exact key first, then the most specific pattern. A key ending in @stepN (for example #bench@step1) is used on that step only, ahead of the plain key.",
   "#sound-toggle": "Turn the workshop sounds on or off. Sound starts off.",
   "#motion-toggle": "Calm motion cuts down on animation. The page remembers your choice.",
   "#reset-progress": "Start the ladder over from Step 1. You'll be asked to confirm first.",
@@ -36,6 +36,8 @@
   "#bench-delete": "Remove the selected part or wire from the bench. The Delete key works too.",
   "#bench-clear": "Take everything off the bench and start this build again. Fixed inputs and bulbs stay put.",
   "#bench": "Your workbench. Bring parts over from the tray, then wire them screw to screw.",
+  "#bench@step1": "Your pile. Add cells to raise the voltage, about 1 volt each, and watch the meter climb.",
+  "#bench@step7": "Eight bulbs, each worth twice the one to its right. Flip a switch to light its bulb; the lit bulbs add up to your number.",
   "#bench-stage": "Tap a screw, then another screw, to run a wire between them. Drag a part to move it; tap a switch to flip it.",
   "#magnet-turns-less": "Unwind 10 turns of wire, down to 10.",
   "#magnet-turns-more": "Wind on 10 more turns, up to 120. More turns make a stronger magnet.",

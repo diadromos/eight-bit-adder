@@ -94,8 +94,7 @@
   function vars(n) {
     const v = { targetVolts: TARGET_VOLTS, volts: TARGET_VOLTS, a: NINE.a, b: NINE.b, sum: NINE.a + NINE.b };
     if (n === 7) {
-      /* {target} in the Goal is the next number to make; {made} is the one just made. Joseph's Success line uses {target}
-         for the number just made, so the Success line is filled with target = made (see goalCard). */
+      /* Step 7: {target} is the number to make next, {made} the number just made (and {binary} is {made} in binary). */
       const next = BIN_TARGETS[Math.min(S.bin.idx, BIN_TARGETS.length - 1)];
       const made = run.binShown != null ? run.binShown : done(7) ? BIN_TARGETS[BIN_TARGETS.length - 1] : null;
       v.target = next; v.made = made != null ? made : next; v.binary = v.made.toString(2).padStart(8, '0');
@@ -106,7 +105,7 @@
   }
   function goalCard() {
     const n = cur, st = T.steps[n], V = vars(n), F = s => esc(T && LADDER_TEXT.fill(s, V));
-    const FS = s => esc(LADDER_TEXT.fill(s, n === 7 ? Object.assign({}, V, { target: V.made }) : V));
+    const FS = F;
     let sub = '';
     if (n === 6) sub = `<p class="subgoal" id="subgoal">${F(st.goals[sub6])}</p>`;
     if (n === 8) sub = `<p class="subgoal" id="subgoal">${F(st.goals[sub8 === 'half' ? 'Half adder' : 'Full adder'])}</p>`;
@@ -186,7 +185,7 @@
   function step1(w) {
     const cells = (S.benches.pile1 && S.benches.pile1.cells) || (S.pile ? S.pile.map(c => Object.assign({}, c)) : []);
     w.innerHTML =
-      `<div class="bn-scene scene pile-scene" id="bench" data-notip>${root.BENCH.benchTop()}<div class="pile-holder" id="pile-drop"><div class="pile-art" id="pile-art"></div><div class="pile-cells" id="pile-cells"></div></div>` +
+      `<div class="bn-scene scene pile-scene" id="bench">${root.BENCH.benchTop()}<div class="pile-holder" id="pile-drop"><div class="pile-art" id="pile-art"></div><div class="pile-cells" id="pile-cells"></div></div>` +
       `<div class="meter-box"><div id="pile-meter"></div><output class="volts" id="pile-volts"></output></div></div>` +
       `<div class="bench-tools"><button class="btn bench-btn" id="pile-remove" type="button">${UI.pileRemove}</button><p class="bench-status" id="bench-status" aria-live="polite"></p></div>` +
       `<div class="tray-wrap"><div class="tray-label">${UI.tray}</div><div class="tray" id="tray"><div class="tray-box">${root.BENCH_ART.tray}` +
@@ -379,7 +378,7 @@
 
   /* Step 7: binary with eight bulbs */
   function step7(w) {
-    w.innerHTML = `<div class="bn-scene scene bin-scene" id="bench" data-notip>${root.BENCH.benchTop()}<p class="challenge" id="bin-challenge"></p><div id="bin-row"></div>` +
+    w.innerHTML = `<div class="bn-scene scene bin-scene" id="bench">${root.BENCH.benchTop()}<p class="challenge" id="bin-challenge"></p><div id="bin-row"></div>` +
       `<div class="bin-switches" id="bin-switches">${[7, 6, 5, 4, 3, 2, 1, 0].map(i => `<button type="button" class="bin-sw" id="bin-bit-${i}" data-bit="${i}" aria-pressed="false" aria-label="Bulb worth ${1 << i}"><span>${1 << i}</span></button>`).join('')}</div>` +
       `<p class="bin-value"><output id="bin-value">0</output></p></div><div class="bench-tools"><button class="btn bench-btn" id="bin-clear" type="button">${UI.binClear}</button></div>`;
     let v = S.bin.value || 0;
@@ -500,13 +499,14 @@
   }
 
   /* ---------------- tooltips: Joseph's docs/ladder-tooltips.json, verbatim ----------------
-     Exact key first, else the most specific * pattern (* = one dash-free id segment). Joseph's loader, unchanged. */
+     Lookup: exact '#id@stepN' for the current step, then exact '#id', then the most specific * pattern (* = one dash-free id segment).
+     The pattern part is Joseph's loader, unchanged except that @step keys are left out of it. */
   let TIPS = {};
-  const tipFor = (id, tips) => tips['#' + id] || Object.keys(tips).filter(k => k.includes('*')).map(k => [k, new RegExp('^' + k.replace(/\*/g, '[^-]+') + '$')]).filter(([, re]) => re.test('#' + id)).sort((a, b) => b[0].replace(/\*/g, '').length - a[0].replace(/\*/g, '').length).map(([k]) => tips[k])[0];
+  const tipFor = (id, tips, step) => /@/.test(id) ? undefined : (step != null && tips['#' + id + '@step' + step]) || tips['#' + id] || Object.keys(tips).filter(k => k.includes('*') && !k.includes('@')).map(k => [k, new RegExp('^' + k.replace(/\*/g, '[^-]+') + '$')]).filter(([, re]) => re.test('#' + id)).sort((a, b) => b[0].replace(/\*/g, '').length - a[0].replace(/\*/g, '').length).map(([k]) => tips[k])[0];
   const SVG_NS = 'http://www.w3.org/2000/svg';
   function tipEl(el) {
     if (!el.id || el.closest('[data-notip]') === el) return;
-    const t = tipFor(el.id, TIPS); if (!t) return;
+    const t = tipFor(el.id, TIPS, cur); if (!t) return;
     if (el instanceof SVGElement) {        /* SVG has no title attribute: use a <title> child */
       let ti = el.firstElementChild; if (!ti || ti.tagName !== 'title') { ti = document.createElementNS(SVG_NS, 'title'); el.insertBefore(ti, el.firstChild); }
       if (ti.textContent !== t) ti.textContent = t;
@@ -537,6 +537,6 @@
     LADDER.ready = true; document.documentElement.dataset.ready = '1';
   }
   const LADDER = root.LADDER = { ready: false, fast: false, UI, go, get S() { return S; }, get bench() { return bench; }, get step() { return cur; }, get T() { return T; },
-    unlocked, done, resetProgress, tipFor: id => tipFor(id, TIPS), get tips() { return TIPS; }, setSub: (k, v) => { if (k === 6) sub6 = v; if (k === 8) sub8 = v; } };
+    unlocked, done, resetProgress, tipFor: (id, step) => tipFor(id, TIPS, step == null ? cur : step), get tips() { return TIPS; }, setSub: (k, v) => { if (k === 6) sub6 = v; if (k === 8) sub8 = v; } };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })(window);

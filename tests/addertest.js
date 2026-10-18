@@ -43,7 +43,7 @@ const TXT = require(path.join(ROOT, 'js/ladder/text.js')); const MD = TXT.parse(
     await ev(p, n => LADDER.go(n), n); await sleep(40);
     const got = await ev(p, () => ({ title: document.querySelector('#step-title').textContent, intro: document.querySelector('.goal-card .intro').textContent, goal: document.querySelector('#step-goal').textContent,
       hints: [...document.querySelectorAll('#step-hints p')].map(e => e.textContent), success: document.querySelector('#step-success').textContent, learned: document.querySelector('#step-learned').textContent, all: document.querySelector('#goal-card').textContent }));
-    const st = MD.steps[n], V = { targetVolts: 3, volts: 3, target: 13, binary: '00001101', gate: 'XOR', module: 'Full adder', a: 13, b: 29, sum: 42 };
+    const st = MD.steps[n], V = { targetVolts: 3, volts: 3, target: 13, made: 13, binary: '00001101', gate: 'XOR', module: 'Full adder', a: 13, b: 29, sum: 42 };
     const F = s => TXT.fill(s, V);
     if (got.title !== `Step ${n}: ${st.title}`) textBad.push(n + ' title');
     if (got.intro !== st.intro || got.goal !== F(st.goal) || got.learned !== st.learned || got.success !== F(st.success) || JSON.stringify(got.hints) !== JSON.stringify(st.hints.map(F))) textBad.push(n + ' fields');
@@ -186,7 +186,7 @@ const TXT = require(path.join(ROOT, 'js/ladder/text.js')); const MD = TXT.parse(
   const setBin = async v => { const cur = await ev(p, () => +document.querySelector('#bin-value').dataset.value); for (let i = 0; i < 8; i++) if (((cur ^ v) >> i) & 1) await p.click('#bin-bit-' + i); };
   const st7 = () => ev(p, () => ({ goal: document.querySelector('#step-goal').textContent, ch: document.querySelector('#bin-challenge').textContent, tgt: document.querySelector('#bin-challenge').dataset.target,
     succ: document.querySelector('#step-success').hidden ? null : document.querySelector('#step-success').textContent, idx: LADDER.S.bin.idx, lit: [...document.querySelectorAll('#bin-row .bb.on')].map(e => e.dataset.bit).join('') }));
-  const G7 = t => TXT.fill(MD.steps[7].goal, { target: t }), S7 = (t, bin) => TXT.fill(MD.steps[7].success, { target: t, binary: bin });
+  const G7 = t => TXT.fill(MD.steps[7].goal, { target: t }), S7 = (t, bin) => TXT.fill(MD.steps[7].success, { made: t, binary: bin });
   const c0 = await st7();
   await setBin(12); const d12 = await isDone(p, 7), c12 = await st7();
   await setBin(13); const s13 = await st7();
@@ -197,7 +197,9 @@ const TXT = require(path.join(ROOT, 'js/ladder/text.js')); const MD = TXT.parse(
     MD.steps[7].challenges.length === 3 && c0.goal === G7(13) && c0.ch === MD.steps[7].challenges[0] && c0.tgt === '13' && c12.goal === G7(13) && c12.succ === null &&
     s13.goal === G7(29) && s13.ch === MD.steps[7].challenges[1] && s13.tgt === '29' &&
     s29.goal === G7(42) && s29.ch === MD.steps[7].challenges[2] && s29.succ === S7(29, '00011101') &&
-    s42.succ === S7(42, '00101010') && s42.ch === '' && [13, 29, 42].every((t, i) => MD.steps[7].challenges[i].startsWith('Make ' + t + '.') && MD.steps[7].challenges[i].endsWith(t.toString(2).padStart(8, '0') + '.')),
+    s42.succ === S7(42, '00101010') && s42.ch === '' && [13, 29, 42].every((t, i) => MD.steps[7].challenges[i].startsWith('Make ' + t + '.')) &&
+    JSON.stringify(MD.steps[7].challenges) === JSON.stringify(['Make 13.', 'Make 29. Same trick: start with the biggest bulb that fits.', 'Make 42. This one skips a few bulbs along the way.']) &&
+    !/\{/.test(s13.succ + s29.succ + s42.succ + c0.goal) && !MD.steps[7].challenges.some(c => /[01]{8}|\d \+ \d/.test(c)),
     JSON.stringify({ c0, s13, s29, s42 }));
   await p.click('#bin-clear'); r = await ev(p, () => [document.querySelector('#bin-clear').textContent, document.querySelector('#bin-value').dataset.value]);
   ok('Step 7: #bin-clear reads "' + 'All bulbs off" and turns every bulb off', r[0] === 'All bulbs off' && r[1] === '0', JSON.stringify(r));
@@ -279,11 +281,17 @@ const TXT = require(path.join(ROOT, 'js/ladder/text.js')); const MD = TXT.parse(
     p = await open('?unlock=all&step=8', { clear: true });
     const t8 = await ev(p, () => ['part-inA', 'part-inB', 'part-outS', 'part-outC', 'adder-tab-full', 'test-half'].map(i => [i, document.getElementById(i) && document.getElementById(i).getAttribute('title')]));
     await ev(p, () => LADDER.go(1)); await sleep(80); await p.click('#tray-cell'); await p.waitForSelector('#pile-cell-1'); await sleep(80);
-    const t1 = await ev(p, () => [document.querySelector('#tray-cell').title, document.querySelector('#pile-cell-1').title, document.querySelector('#bench').hasAttribute('title')]);
+    const t1 = await ev(p, () => [document.querySelector('#tray-cell').title, document.querySelector('#pile-cell-1').title, document.querySelector('#bench').getAttribute('title')]);
+    await ev(p, () => LADDER.go(7)); await sleep(80);
+    const t7 = await ev(p, () => [document.querySelector('#bench').getAttribute('title'), document.querySelector('#bin-bit-0').title]);
+    await ev(p, () => LADDER.go(5)); await sleep(80);
+    const t5 = await ev(p, () => [document.querySelector('#bench').getAttribute('title'), LADDER.tipFor('bench', 1), LADDER.tipFor('bench', 7), LADDER.tipFor('bench', 3), LADDER.tipFor('_format'), LADDER.tipFor('bench@step1', 2)]);
     await p.close();
-    ok('tooltips: Joseph\'s text as title on static controls, parts, terminals (pattern specificity: -pos/-neg beat *-*), SVG <title> on wires; aria-labels kept',
-      statOk && dynOk && t8.every(([i, v]) => v === TIPS['#' + i]) && t1[0] === TIPS['#tray-cell'] && t1[1] === TIPS['#pile-cell-*'] && !t1[2] && /\S/.test(t.aria || '') && t.sel === TIPS['#term-*-pos'],
-      JSON.stringify({ stat: t.stat.filter(([i, v]) => v !== want(i)), dyn: t.dyn, t8, t1, aria: t.aria })); }
+    ok('tooltips: #bench@step1 / #bench@step7 win on steps 1 and 7, plain #bench elsewhere; _format never used. Joseph\'s text as title on static controls, parts, terminals (pattern specificity: -pos/-neg beat *-*), SVG <title> on wires; aria-labels kept',
+      statOk && dynOk && t8.every(([i, v]) => v === TIPS['#' + i]) && t1[0] === TIPS['#tray-cell'] && t1[1] === TIPS['#pile-cell-*'] && t1[2] === TIPS['#bench@step1'] &&
+      t7[0] === TIPS['#bench@step7'] && t7[1] === TIPS['#bin-bit-0'] && t5[0] === TIPS['#bench'] && t5[1] === TIPS['#bench@step1'] && t5[2] === TIPS['#bench@step7'] && t5[3] === TIPS['#bench'] && !t5[4] && !t5[5] &&
+      TIPS['#bench@step1'] !== TIPS['#bench'] && TIPS['#bench@step7'] !== TIPS['#bench'] && /\S/.test(t.aria || '') && t.sel === TIPS['#term-*-pos'],
+      JSON.stringify({ stat: t.stat.filter(([i, v]) => v !== want(i)), dyn: t.dyn, t8, t1, t7, t5, aria: t.aria })); }
 
   // ---------- 13. unlock flow end to end + reset ----------
   p = await open('', { clear: true });

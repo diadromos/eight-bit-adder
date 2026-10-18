@@ -4,9 +4,9 @@ Text for the 9-step ladder version of the 8-bit adder. Plain and friendly, for a
 
 **Format (for loading, like page-text.md):**
 - Each section starts with a `## ` heading. Steps are `## Step N: Title` (N = 1 to 9). The other sections are `## Ladder intro` and `## Reset progress`.
-- Inside a section, each field is one line that starts with a bold label: `**Intro:**`, `**Goal:**`, `**Hint:**`, `**Success:**`, `**What you learned:**`. Steps 6 and 8 also have one `**Goal (Name):**` line per gate or module (NOT, AND, OR, XOR; Half adder, Full adder). Step 7 has one `**Challenge N:**` line per challenge, in order; the page doesn't show these yet, so they double as a check on the targets and answers. A step can have more than one `**Hint:**` line; show them in order.
+- Inside a section, each field is one line that starts with a bold label: `**Intro:**`, `**Goal:**`, `**Hint:**`, `**Success:**`, `**What you learned:**`. Steps 6 and 8 also have one `**Goal (Name):**` line per gate or module (NOT, AND, OR, XOR; Half adder, Full adder). Step 7 has one `**Challenge N:**` line per challenge, in order; the page shows the current one above the row of bulbs. A step can have more than one `**Hint:**` line; show them in order.
 - `## Ladder intro` uses `**Intro:**` (one or more lines). `## Reset progress` uses `**Question:**`, `**Confirm:**` and `**Cancel:**`.
-- Text in `{curly braces}` is a placeholder for the code to fill in.
+- Text in `{curly braces}` is a placeholder for the code to fill in. In Step 7, `{target}` is the number to make next and `{made}` is the number just made.
 - Field text is plain (no Markdown inside it), so it can go straight into a `<p>`, a button or a tooltip.
 
 ## Ladder intro
@@ -75,12 +75,12 @@ Text for the 9-step ladder version of the 8-bit adder. Plain and friendly, for a
 
 **Intro:** Eight bulbs in a row can show any whole number from 0 to 255, because each bulb is worth twice the one to its right: 1, 2, 4, 8, 16, 32, 64 and 128. Add up the lit bulbs, and that's your number.
 **Goal:** Make {target} by lighting the right bulbs.
-**Challenge 1:** Make 13. That's 8 + 4 + 1, or 00001101.
-**Challenge 2:** Make 29. That's 16 + 8 + 4 + 1, or 00011101.
-**Challenge 3:** Make 42. That's 32 + 8 + 2, or 00101010.
+**Challenge 1:** Make 13.
+**Challenge 2:** Make 29. Same trick: start with the biggest bulb that fits.
+**Challenge 3:** Make 42. This one skips a few bulbs along the way.
 **Hint:** Start with the biggest bulb that fits, light it, and see what's left. For example, 13: 8 fits, leaving 5; then 4, leaving 1; then 1.
 **Hint:** The rightmost bulb is worth 1. Light all eight and you get 255.
-**Success:** That's {target}, written {binary} in binary.
+**Success:** That's {made}, written {binary} in binary.
 **What you learned:** Bits can stand for any number, not just on and off. Next, you'll build gates that add them.
 
 ## Step 8: Half adder, then full adder
