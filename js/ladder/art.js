@@ -94,8 +94,20 @@
   const spark = g => root.BENCH.spark(g);
   const burst = (host, x, y) => root.BENCH.burst(host, x, y);
   /* cloth-covered wire: Henri's BENCH.wire, plus an id and a wide invisible hit path so a wire can be picked */
-  function wireSvg(id, p, q, color) {
-    const g = root.BENCH.wire(+p.x.toFixed(1), +p.y.toFixed(1), +q.x.toFixed(1), +q.y.toFixed(1), { color: color || 'brown', sag: .1 });
+  /* routed wire: straight runs through the given points with rounded elbows (r px), same cloth layers as BENCH.wire */
+  function routePath(pts, r) {
+    r = r || 12; const f = n => +n.toFixed(1);
+    let d = `M${f(pts[0][0])} ${f(pts[0][1])}`;
+    for (let i = 1; i < pts.length - 1; i++) {
+      const [x0, y0] = pts[i - 1], [x1, y1] = pts[i], [x2, y2] = pts[i + 1];
+      const l1 = Math.hypot(x1 - x0, y1 - y0) || 1, l2 = Math.hypot(x2 - x1, y2 - y1) || 1, k1 = Math.min(r, l1 / 2) / l1, k2 = Math.min(r, l2 / 2) / l2;
+      d += ` L${f(x1 - (x1 - x0) * k1)} ${f(y1 - (y1 - y0) * k1)} Q${f(x1)} ${f(y1)} ${f(x1 + (x2 - x1) * k2)} ${f(y1 + (y2 - y1) * k2)}`;
+    }
+    const e = pts[pts.length - 1]; return d + ` L${f(e[0])} ${f(e[1])}`;
+  }
+  function wireSvg(id, p, q, color, route) {
+    let g = root.BENCH.wire(+p.x.toFixed(1), +p.y.toFixed(1), +q.x.toFixed(1), +q.y.toFixed(1), { color: color || 'brown', sag: .1 });
+    if (route && route.length) { const rd = routePath([[p.x, p.y]].concat(route, [[q.x, q.y]])); g = g.replace(/ d='[^']*'/g, ` d='${rd}'`); }
     const d = (g.match(/d='([^']+)'/) || [])[1];
     return g.replace('<g ', `<g id='wire-${id}' data-wire='${id}' `).replace(/(<g [^>]*>)/, `$1<path class='cw-hit' d='${d}'/>`);
   }

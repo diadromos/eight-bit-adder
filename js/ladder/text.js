@@ -15,7 +15,9 @@
       if (s) {
         const goals = {};
         Object.keys(f).forEach(k => { const g = k.match(/^Goal \((.+)\)$/); if (g) goals[g[1]] = f[k][0]; });
-        out.steps[+s[1]] = { n: +s[1], title: s[2], intro: (f.Intro || [])[0] || '', goal: (f.Goal || [])[0] || '', goals,
+        const challenges = [];
+        Object.keys(f).forEach(k => { const c = k.match(/^Challenge (\d+)$/); if (c) challenges[+c[1] - 1] = f[k][0]; });
+        out.steps[+s[1]] = { n: +s[1], title: s[2], intro: (f.Intro || [])[0] || '', goal: (f.Goal || [])[0] || '', goals, challenges,
           hints: f.Hint || [], success: (f.Success || [])[0] || '', learned: (f['What you learned'] || [])[0] || '' };
       } else if (/^Ladder intro/.test(title)) out.intro = f.Intro || [];
       else if (/^Reset progress/.test(title)) out.reset = { question: (f.Question || [])[0], confirm: (f.Confirm || [])[0], cancel: (f.Cancel || [])[0] };

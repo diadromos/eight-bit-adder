@@ -165,7 +165,7 @@
   P.drawWires = function () {
     if (!this.pinMap) return;
     let h = '';
-    this.wires.forEach(w => { const p = this.pt(w.a), q = this.pt(w.b); if (!p || !q) return; h += ART().wireSvg(w.id, p, q, w.color); });
+    this.wires.forEach(w => { const p = this.pt(w.a), q = this.pt(w.b); if (!p || !q) return; h += ART().wireSvg(w.id, p, q, w.color, this.cfg.wireRoute ? this.cfg.wireRoute(p, q, this) : null); });
     this.wiresEl.innerHTML = h; this.wiresEl.setAttribute('viewBox', `0 0 ${this.W} ${this.H}`);
     this.wiresEl.querySelectorAll('.cw').forEach(g => { g.classList.toggle('selected', !!(this.sel && this.sel.type === 'wire' && 'wire-' + this.sel.id === g.id)); });
     this.vis = null; if (this.res) this.show(this.res, 'render');

@@ -13,22 +13,23 @@
     parts: { cell: 'Cell', pile: 'Your pile', lamp: 'Bulb', knife: 'Knife switch', 'knife-a': 'Switch A', 'knife-b': 'Switch B', magnet: 'Electro- magnet', relay: 'Relay',
       NOT: 'NOT', AND: 'AND', OR: 'OR', XOR: 'XOR', HALF: 'Half adder', FULL: 'Full adder' },
     pileRemove: 'Remove top cell', pileFlip: (k, f) => `Cell ${k}, ${f ? 'copper' : 'zinc'} at the bottom. Click to flip it.`,
-    pileTooMuch: 'More than 3 volts: too much push for the small bulb.', pileVolts: v => `${v.toFixed(1)} V`,
+    pileTooMuch: 'More than 3 volts: too much push for the small bulb. Take a cell off.', pileVolts: v => `${v.toFixed(1)} V`,
     magnetTurns: t => `${t} turns`, magnetMore: 'More turns', magnetLess: 'Fewer turns', magnetInsulated: ['Wire: bare copper', 'Wire: insulated'],
     magnetNone: 'Put the electromagnet on the bench first.',
-    status: { short: 'Short circuit! The pile is wired straight back to itself, so nothing else gets any current.', buzz: 'A relay keeps switching itself on and off (a buzzer).',
-      lit: 'The lamp is lit.', dark: 'The lamp is dark: there is no complete loop through it yet.', grab: 'The magnet is holding the iron.',
+    status: { short: "Short circuit! The two ends of your pile are wired straight together, so the current takes that shortcut and skips everything else.", buzz: 'A relay keeps switching itself on and off, like a buzzer.',
+      lit: 'The bulb is lit.', dark: 'The bulb is dark: there is no complete loop through it yet.', grab: 'The magnet is holding the iron.',
       weak: 'Current is flowing, but the magnet is too weak to lift the iron.', conflict: 'Two outputs are wired together. Each wire should be driven by just one output.' },
     checks: { 1: ['3 volts'], 2: ['The bulb lights'], 3: ['On', 'Off', 'On'], 4: ['Picks up the iron', 'Drops it when switched off'],
       5: ['Normally open relay', 'Normally closed relay'], 6: ['NOT', 'AND', 'OR', 'XOR'], 7: ['13', '29', '42'], 8: ['Half adder', 'Full adder'],
       9: ['Eight full adders in place', 'Carry chain connected', '13 + 29 = 42'] },
     needRelays: n => `Build it with relays: use at least ${n} relay${n > 1 ? 's' : ''}.`,
-    rowBad: 'Not yet: the rows marked ✗ give the wrong lamp.', relayPath: 'The lamp must be switched through a relay contact, not straight through the input switch.',
+    rowBad: "Not yet: the rows marked ✗ don't match the truth table.", relayPath: 'The bulb must be switched through a relay contact, not straight through the input switch.',
     shortRow: 'Short circuit in a row marked ✗.', lampNeeded: 'Put one bulb on the bench as the output.', inputsNeeded: k => `Put ${k} on the bench as the input${k.includes(' and ') ? 's' : ''}.`,
-    challenge: (i, n) => `Challenge ${i} of ${n}`, value: v => `= ${v}`, operand: (k, v) => `${k} = ${v}`, sum: 'Sum', carryOut: 'Carry out',
-    nineBit: i => `bit ${i}`, slot: i => `bit ${i} · ${1 << i}`, tableHead: { lamp: 'Lamp', want: 'Should be', got: 'Got', ok: '' }, on: 'on', off: 'off',
+    challenge: (i, n) => `Challenge ${i} of ${n}`, value: v => `= ${v}`, operand: (k, v) => `${k} = ${v}`, sum: 'Sum', carryOut: 'Carry-out',
+    nineBit: i => `bit ${i}`, slot: i => `bit ${i} · ${1 << i}`, tableHead: { lamp: 'Bulb', want: 'Should be', got: 'Got', ok: '' }, on: 'on', off: 'off',
     tabs6: { NOT: 'NOT', AND: 'AND', OR: 'OR', XOR: 'XOR' }, tabs8: { half: 'Half adder', full: 'Full adder' },
-    inLabel: { A: 'A', B: 'B', Cin: 'Cin' }, outLabel: { out: 'Lamp', S: 'Sum', C: 'Carry', Cout: 'Cout' }
+    inLabel: { A: 'A', B: 'B', Cin: 'Cin' }, outLabel: { out: 'Bulb', S: 'Sum', C: 'Carry', Cout: 'Cout' }, outPart: l => `Bulb ${l}`,
+    binClear: 'All bulbs off', nineReminder: (a, b, s) => `Now set A to ${a} and B to ${b}: the sum should be ${s}.`
   };
   const KEY = 'adder-ladder-v1', TARGET_VOLTS = 3, BIN_TARGETS = [13, 29, 42], NINE = { a: 13, b: 29 };
   const qs = new URLSearchParams(location.search), UNLOCK_ALL = qs.get('unlock') === 'all';
@@ -92,13 +93,20 @@
   /* ---------------- goal card ---------------- */
   function vars(n) {
     const v = { targetVolts: TARGET_VOLTS, volts: TARGET_VOLTS, a: NINE.a, b: NINE.b, sum: NINE.a + NINE.b };
-    if (n === 7) { const t = BIN_TARGETS[Math.min(S.bin.idx, BIN_TARGETS.length - 1)]; v.target = run.binShown != null ? run.binShown : t; v.binary = v.target.toString(2).padStart(8, '0'); }
+    if (n === 7) {
+      /* {target} in the Goal is the next number to make; {made} is the one just made. Joseph's Success line uses {target}
+         for the number just made, so the Success line is filled with target = made (see goalCard). */
+      const next = BIN_TARGETS[Math.min(S.bin.idx, BIN_TARGETS.length - 1)];
+      const made = run.binShown != null ? run.binShown : done(7) ? BIN_TARGETS[BIN_TARGETS.length - 1] : null;
+      v.target = next; v.made = made != null ? made : next; v.binary = v.made.toString(2).padStart(8, '0');
+    }
     if (n === 6) v.gate = run.gateShown || 'XOR';
     if (n === 8) v.module = run.moduleShown || T.steps[8].goals['Full adder'] && 'Full adder';
     return v;
   }
   function goalCard() {
     const n = cur, st = T.steps[n], V = vars(n), F = s => esc(T && LADDER_TEXT.fill(s, V));
+    const FS = s => esc(LADDER_TEXT.fill(s, n === 7 ? Object.assign({}, V, { target: V.made }) : V));
     let sub = '';
     if (n === 6) sub = `<p class="subgoal" id="subgoal">${F(st.goals[sub6])}</p>`;
     if (n === 8) sub = `<p class="subgoal" id="subgoal">${F(st.goals[sub8 === 'half' ? 'Half adder' : 'Full adder'])}</p>`;
@@ -106,7 +114,7 @@
       `<div class="goal-card${done(n) ? ' met' : ''}" id="goal-card"><h3 id="step-title">Step ${n}: ${esc(st.title)}</h3>` +
       `<p class="intro">${F(st.intro)}</p><p class="goal" id="step-goal">${F(st.goal)}</p>${sub}<ul class="checks" id="checks"></ul>` +
       `<details class="hints" id="step-hints"><summary id="hints-toggle">${UI.hints}</summary>${st.hints.map((h, i) => `<p id="hint-${i + 1}">${F(h)}</p>`).join('')}</details>` +
-      `<p class="success" id="step-success"${run.success || done(n) ? '' : ' hidden'}>${F(st.success)}</p>` +
+      `<p class="success" id="step-success"${run.success || done(n) ? '' : ' hidden'}>${FS(st.success)}</p>` +
       `<p class="learned" id="step-learned"${done(n) ? '' : ' hidden'}>${F(st.learned)}</p>` +
       `<div class="stepnav"><button class="btn" id="prev-step" type="button"${n > 1 ? '' : ' disabled'}>${UI.prev}</button>` +
       `<button class="btn primary" id="next-step" type="button"${n < 9 && unlocked(n + 1) ? '' : ' disabled'}>${UI.next}</button></div></div>`;
@@ -164,7 +172,7 @@
     const kind = { 'knife-a': 'knife', 'knife-b': 'knife' }[key] || key;
     return Object.assign({ key, kind, name: UI.parts[key], max }, key === 'pile' ? { cells: pileCells() } : {}, key === 'knife-a' ? { label: 'A' } : {}, key === 'knife-b' ? { label: 'B' } : {}, extra || {});
   };
-  const partName = p => (p.label && UI.parts[p.key] ? UI.parts[p.key] : (p.kind === 'IN' ? 'Input ' + p.label : p.kind === 'OUT' ? 'Lamp ' + p.label : UI.parts[p.key || p.kind] || UI.parts[p.kind] || p.kind)).replace('- ', '');
+  const partName = p => (p.label && UI.parts[p.key] ? UI.parts[p.key] : (p.kind === 'IN' ? 'Input ' + p.label : p.kind === 'OUT' ? (p.label === UI.outLabel.out ? p.label : UI.outPart(p.label)) : UI.parts[p.key || p.kind] || UI.parts[p.kind] || p.kind)).replace('- ', '');
   function mkBench(host, key, cfg) {
     const b = new root.Bench(host, Object.assign({
       state: S.benches[key], ui: UI, partName,
@@ -178,7 +186,7 @@
   function step1(w) {
     const cells = (S.benches.pile1 && S.benches.pile1.cells) || (S.pile ? S.pile.map(c => Object.assign({}, c)) : []);
     w.innerHTML =
-      `<div class="bn-scene scene pile-scene" id="bench">${root.BENCH.benchTop()}<div class="pile-holder" id="pile-drop"><div class="pile-art" id="pile-art"></div><div class="pile-cells" id="pile-cells"></div></div>` +
+      `<div class="bn-scene scene pile-scene" id="bench" data-notip>${root.BENCH.benchTop()}<div class="pile-holder" id="pile-drop"><div class="pile-art" id="pile-art"></div><div class="pile-cells" id="pile-cells"></div></div>` +
       `<div class="meter-box"><div id="pile-meter"></div><output class="volts" id="pile-volts"></output></div></div>` +
       `<div class="bench-tools"><button class="btn bench-btn" id="pile-remove" type="button">${UI.pileRemove}</button><p class="bench-status" id="bench-status" aria-live="polite"></p></div>` +
       `<div class="tray-wrap"><div class="tray-label">${UI.tray}</div><div class="tray" id="tray"><div class="tray-box">${root.BENCH_ART.tray}` +
@@ -371,16 +379,17 @@
 
   /* Step 7: binary with eight bulbs */
   function step7(w) {
-    w.innerHTML = `<div class="bn-scene scene bin-scene" id="bench">${root.BENCH.benchTop()}<p class="challenge" id="bin-challenge"></p><div id="bin-row"></div>` +
+    w.innerHTML = `<div class="bn-scene scene bin-scene" id="bench" data-notip>${root.BENCH.benchTop()}<p class="challenge" id="bin-challenge"></p><div id="bin-row"></div>` +
       `<div class="bin-switches" id="bin-switches">${[7, 6, 5, 4, 3, 2, 1, 0].map(i => `<button type="button" class="bin-sw" id="bin-bit-${i}" data-bit="${i}" aria-pressed="false" aria-label="Bulb worth ${1 << i}"><span>${1 << i}</span></button>`).join('')}</div>` +
-      `<p class="bin-value"><output id="bin-value">0</output></p></div><div class="bench-tools"><button class="btn bench-btn" id="bin-clear" type="button">${UI.clear}</button></div>`;
+      `<p class="bin-value"><output id="bin-value">0</output></p></div><div class="bench-tools"><button class="btn bench-btn" id="bin-clear" type="button">${UI.binClear}</button></div>`;
     let v = S.bin.value || 0;
     root.BENCH.binaryRow($('#bin-row'), v);
     const sync = (loud) => {
       $$('.bin-sw').forEach(b => b.setAttribute('aria-pressed', (v >> +b.dataset.bit) & 1 ? 'true' : 'false'));
       $('#bin-value').textContent = UI.value(v); $('#bin-value').dataset.value = v;
       const idx = Math.min(S.bin.idx, BIN_TARGETS.length - 1);
-      $('#bin-challenge').textContent = done(7) ? '' : UI.challenge(idx + 1, BIN_TARGETS.length);
+      $('#bin-challenge').textContent = done(7) ? '' : (T.steps[7].challenges[idx] || UI.challenge(idx + 1, BIN_TARGETS.length));
+      $('#bin-challenge').dataset.target = done(7) ? '' : BIN_TARGETS[idx];
       if (root.SFX) root.SFX.hum(v > 0);
       S.bin.value = v; save();
       if (loud && !done(7) && v === BIN_TARGETS[S.bin.idx]) {
@@ -470,23 +479,57 @@
       mode: 'logic', tray: [trayItem('FULL', 8)], slots: nineSlots, size: { desk: [1240, 250], mob: [624, 440] },
       modulePins: p => [[['Cout', 'out']], [['Cin', 'in']], p.slot != null ? UI.nineBit(p.slot) : ''],
       logicExtra: b => extra(b, S.nine.a, S.nine.b), status: logicStatus,
+      /* phone layout (two rows): a wire between the rows runs along the gap between them instead of cutting across the modules */
+      wireRoute: (p, q, b) => {
+        if (!b.mob || !b.slots[3] || !b.slots[4]) return null;
+        const top = b.slots[4].y + b.slots[4].h, bot = b.slots[3].y, mid = (top + bot) / 2;
+        return (Math.min(p.y, q.y) < top && Math.max(p.y, q.y) > bot) ? [[p.x, mid], [q.x, mid]] : null;
+      },
       check: (b, why) => { if (why === 'move') b.renderAll(); evaluate(b, why); }
     });
     $$('.nine-bit').forEach(btn => btn.addEventListener('click', () => { const k = btn.dataset.k; S.nine[k] ^= 1 << +btn.dataset.bit; save(); sync(); SFX('knife-switch-close', { vol: .2 }); bench.run('inputs'); }));
     $('#test-ripple').addEventListener('click', () => {
       const e = evaluate(bench, 'test'), m = $('#tt-msg');
-      m.textContent = !e.placed ? UI.checks[9][0] + ': ✗' : !e.chain ? UI.checks[9][1] + ': ✗' : (S.nine.a === NINE.a && S.nine.b === NINE.b ? '' : UI.checks[9][2]);
-      m.className = 'tt-msg' + (e.placed && e.chain ? ' ok' : ' bad');
-      if (e.placed && e.chain) m.textContent = UI.checks[9][1] + ': ✓';
+      const ok = e.placed && e.chain, setRight = S.nine.a === NINE.a && S.nine.b === NINE.b;
+      const lines = !e.placed ? [UI.checks[9][0] + ': ✗'] : !e.chain ? [UI.checks[9][1] + ': ✗']
+        : [UI.checks[9][1] + ': ✓', setRight ? UI.checks[9][2] + (done(9) ? ': ✓' : '') : UI.nineReminder(NINE.a, NINE.b, NINE.a + NINE.b)];
+      m.innerHTML = lines.map((t, i) => `<span class="tt-line" id="tt-msg-${i + 1}">${esc(t)}</span>`).join('<br>');
+      m.className = 'tt-msg' + (ok ? ' ok' : ' bad');
     });
     sync(); evaluate(bench, 'render');
+  }
+
+  /* ---------------- tooltips: Joseph's docs/ladder-tooltips.json, verbatim ----------------
+     Exact key first, else the most specific * pattern (* = one dash-free id segment). Joseph's loader, unchanged. */
+  let TIPS = {};
+  const tipFor = (id, tips) => tips['#' + id] || Object.keys(tips).filter(k => k.includes('*')).map(k => [k, new RegExp('^' + k.replace(/\*/g, '[^-]+') + '$')]).filter(([, re]) => re.test('#' + id)).sort((a, b) => b[0].replace(/\*/g, '').length - a[0].replace(/\*/g, '').length).map(([k]) => tips[k])[0];
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  function tipEl(el) {
+    if (!el.id || el.closest('[data-notip]') === el) return;
+    const t = tipFor(el.id, TIPS); if (!t) return;
+    if (el instanceof SVGElement) {        /* SVG has no title attribute: use a <title> child */
+      let ti = el.firstElementChild; if (!ti || ti.tagName !== 'title') { ti = document.createElementNS(SVG_NS, 'title'); el.insertBefore(ti, el.firstChild); }
+      if (ti.textContent !== t) ti.textContent = t;
+    } else if (el.getAttribute('title') !== t) el.setAttribute('title', t);
+  }
+  function applyTips(scope) { const r = scope || document; if (r.id) tipEl(r); r.querySelectorAll && r.querySelectorAll('[id]').forEach(tipEl); }
+  function watchTips() {
+    applyTips($('#ladder-app'));
+    new MutationObserver(ms => ms.forEach(m => {
+      if (m.type === 'attributes') tipEl(m.target);
+      else m.addedNodes.forEach(n => { if (n.nodeType === 1 && n.tagName !== 'title') applyTips(n); });
+    })).observe($('#ladder-app'), { childList: true, subtree: true, attributes: true, attributeFilter: ['id'] });
+  }
+  async function loadTips() {
+    try { const r = await fetch('docs/ladder-tooltips.json', { cache: 'no-cache' }); if (r.ok) { TIPS = await r.json(); delete TIPS._format; } } catch (e) { TIPS = {}; }
   }
 
   /* ---------------- boot ---------------- */
   async function boot() {
     root.BENCH.installDefs();
     try { T = await LADDER_TEXT.load(); } catch (e) { $('#ladder-app').innerHTML = `<p class="load-error">Could not load docs/ladder-text.md (${esc(e.message)}). Serve this folder over http, e.g. python3 -m http.server.</p>`; return; }
-    S = load(); shell();
+    await loadTips();
+    S = load(); shell(); watchTips();
     let n = +qs.get('step') || S.step || 1; if (!unlocked(n)) n = 1;
     if (qs.get('gate') && G6.includes(qs.get('gate').toUpperCase())) sub6 = qs.get('gate').toUpperCase();
     if (qs.get('adder') === 'full') sub8 = 'full';
@@ -494,6 +537,6 @@
     LADDER.ready = true; document.documentElement.dataset.ready = '1';
   }
   const LADDER = root.LADDER = { ready: false, fast: false, UI, go, get S() { return S; }, get bench() { return bench; }, get step() { return cur; }, get T() { return T; },
-    unlocked, done, resetProgress, setSub: (k, v) => { if (k === 6) sub6 = v; if (k === 8) sub8 = v; } };
+    unlocked, done, resetProgress, tipFor: id => tipFor(id, TIPS), get tips() { return TIPS; }, setSub: (k, v) => { if (k === 6) sub6 = v; if (k === 8) sub8 = v; } };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })(window);

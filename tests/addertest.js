@@ -184,10 +184,23 @@ const TXT = require(path.join(ROOT, 'js/ladder/text.js')); const MD = TXT.parse(
   // ---------- 10. Step 7: binary ----------
   p = await open('?unlock=all&step=7', { clear: true });
   const setBin = async v => { const cur = await ev(p, () => +document.querySelector('#bin-value').dataset.value); for (let i = 0; i < 8; i++) if (((cur ^ v) >> i) & 1) await p.click('#bin-bit-' + i); };
-  await setBin(12); const d12 = await isDone(p, 7);
-  await setBin(13); const s13 = await ev(p, () => [document.querySelector('#step-success').textContent, LADDER.S.bin.idx, [...document.querySelectorAll('#bin-row .bb.on')].map(e => e.dataset.bit).join('')]);
-  await setBin(29); await setBin(42);
-  ok('Step 7: 12 is not 13; 13 lights bulbs 8+4+1 (success text "That\'s 13, written 00001101"); 29 then 42 complete the step', !d12 && s13[0] === TXT.fill(MD.steps[7].success, { target: 13, binary: '00001101' }) && s13[1] === 1 && s13[2] === '320' && await isDone(p, 7), JSON.stringify(s13));
+  const st7 = () => ev(p, () => ({ goal: document.querySelector('#step-goal').textContent, ch: document.querySelector('#bin-challenge').textContent, tgt: document.querySelector('#bin-challenge').dataset.target,
+    succ: document.querySelector('#step-success').hidden ? null : document.querySelector('#step-success').textContent, idx: LADDER.S.bin.idx, lit: [...document.querySelectorAll('#bin-row .bb.on')].map(e => e.dataset.bit).join('') }));
+  const G7 = t => TXT.fill(MD.steps[7].goal, { target: t }), S7 = (t, bin) => TXT.fill(MD.steps[7].success, { target: t, binary: bin });
+  const c0 = await st7();
+  await setBin(12); const d12 = await isDone(p, 7), c12 = await st7();
+  await setBin(13); const s13 = await st7();
+  await setBin(29); const s29 = await st7();
+  await setBin(42); const s42 = await st7();
+  ok('Step 7: 12 is not 13; 13 lights bulbs 8+4+1 (success text "That\'s 13, written 00001101"); 29 then 42 complete the step', !d12 && s13.succ === S7(13, '00001101') && s13.idx === 1 && s13.lit === '320' && await isDone(p, 7), JSON.stringify(s13));
+  ok('Step 7 target progression: goal + Joseph\'s challenge line move 13 -> 29 -> 42; success names the number just made',
+    MD.steps[7].challenges.length === 3 && c0.goal === G7(13) && c0.ch === MD.steps[7].challenges[0] && c0.tgt === '13' && c12.goal === G7(13) && c12.succ === null &&
+    s13.goal === G7(29) && s13.ch === MD.steps[7].challenges[1] && s13.tgt === '29' &&
+    s29.goal === G7(42) && s29.ch === MD.steps[7].challenges[2] && s29.succ === S7(29, '00011101') &&
+    s42.succ === S7(42, '00101010') && s42.ch === '' && [13, 29, 42].every((t, i) => MD.steps[7].challenges[i].startsWith('Make ' + t + '.') && MD.steps[7].challenges[i].endsWith(t.toString(2).padStart(8, '0') + '.')),
+    JSON.stringify({ c0, s13, s29, s42 }));
+  await p.click('#bin-clear'); r = await ev(p, () => [document.querySelector('#bin-clear').textContent, document.querySelector('#bin-value').dataset.value]);
+  ok('Step 7: #bin-clear reads "' + 'All bulbs off" and turns every bulb off', r[0] === 'All bulbs off' && r[1] === '0', JSON.stringify(r));
   await p.close();
 
   // ---------- 11. Step 8: half adder then full adder ----------
@@ -230,6 +243,47 @@ const TXT = require(path.join(ROOT, 'js/ladder/text.js')); const MD = TXT.parse(
     slots === '01234567' && !part[1] && broken[0] !== 42 && !broken[1] && r.a === 13 && r.b === 29 && r.sum === 42 && r.lit === '531' && r.done && r.succ === TXT.fill(MD.steps[9].success, { a: 13, b: 29, sum: 42 }) && ov[0] === (140 + 157) % 256 && ov[1] === 1,
     JSON.stringify({ slots, part, broken, r, ov }));
   await p.close();
+
+  // ---------- 12b. Step 9: the #test-ripple message keeps the 13 + 29 = 42 reminder ----------
+  p = await open('?unlock=all&step=9', { clear: true });
+  { const fb = []; for (let i = 0; i < 8; i++) fb.push(await place(p, 'FULL'));
+    const msg = () => ev(p, () => [...document.querySelectorAll('#tt-msg .tt-line')].map(e => e.textContent));
+    await p.click('#test-ripple'); const m0 = await msg();
+    for (let i = 0; i < 7; i++) await wire(p, fb[i], 'Cout', fb[i + 1], 'Cin');
+    await p.click('#test-ripple'); const m1 = await msg(), d1 = await isDone(p, 9);
+    for (const [k, v] of [['a', 13], ['b', 29]]) for (let i = 0; i < 8; i++) if ((v >> i) & 1) await p.click(`#nine-${k}-bit-${i}`);
+    await p.click('#test-ripple'); const m2 = await msg();
+    const U = await ev(p, () => LADDER.UI), goal = await ev(p, () => document.querySelector('#step-goal').textContent);
+    ok('Step 9 message: no chain -> "Carry chain connected: ✗"; chain but A/B unset -> chain ✓ AND the 13 + 29 reminder; 13 + 29 -> chain ✓ and "13 + 29 = 42: ✓"; new Goal text filled',
+      m0.length === 1 && m0[0] === 'Carry chain connected: ✗' && m1.length === 2 && m1[0] === 'Carry chain connected: ✓' && m1[1] === 'Now set A to 13 and B to 29: the sum should be 42.' && !d1 &&
+      m2.length === 2 && m2[0] === 'Carry chain connected: ✓' && m2[1] === '13 + 29 = 42: ✓' && await isDone(p, 9) && goal === TXT.fill(MD.steps[9].goal, { a: 13, b: 29 }) && !/\{/.test(goal),
+      JSON.stringify({ m0, m1, m2, goal })); }
+  await p.close();
+
+  // ---------- 12c. tooltips from docs/ladder-tooltips.json ----------
+  { const TIPS = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs/ladder-tooltips.json'), 'utf8')); delete TIPS._format;
+    p = await open('?unlock=all&step=5', { clear: true });
+    const pl = await place(p, 'pile'), lp = await place(p, 'lamp'), rl = await place(p, 'relay');
+    await wire(p, pl, '+', lp, 'a'); await sleep(60);
+    const t = await ev(p, (pl, lp, rl) => {
+      const tt = id => { const e = document.getElementById(id); if (!e) return null; if (e instanceof SVGElement) { const c = e.querySelector(':scope > title'); return c ? c.textContent : null; } return e.getAttribute('title'); };
+      const w = LADDER.bench.wires[0];
+      return { stat: ['sound-toggle', 'motion-toggle', 'reset-progress', 'reset-confirm', 'step-nav-5', 'hints-toggle', 'tray-relay', 'tray-lamp', 'bench-delete', 'bench-clear', 'bench-stage'].map(i => [i, tt(i)]),
+        dyn: [['part-' + rl, tt('part-' + rl)], ['term-' + pl + '-pos', tt('term-' + pl + '-pos')], ['term-' + pl + '-neg', tt('term-' + pl + '-neg')], ['term-' + rl + '-com', tt('term-' + rl + '-com')], ['wire-' + w.id, tt('wire-' + w.id)]],
+        aria: document.getElementById('term-' + pl + '-pos').getAttribute('aria-label'), sel: LADDER.tipFor('term-' + pl + '-pos') };
+    }, pl, lp, rl);
+    const want = (id, key) => TIPS[key || '#' + id];
+    const statOk = t.stat.every(([i, v]) => v === want(i));
+    const dynOk = t.dyn[0][1] === TIPS['#part-*'] && t.dyn[1][1] === TIPS['#term-*-pos'] && t.dyn[2][1] === TIPS['#term-*-neg'] && t.dyn[3][1] === TIPS['#term-*-*'] && t.dyn[4][1] === TIPS['#wire-*'];
+    await p.close();
+    p = await open('?unlock=all&step=8', { clear: true });
+    const t8 = await ev(p, () => ['part-inA', 'part-inB', 'part-outS', 'part-outC', 'adder-tab-full', 'test-half'].map(i => [i, document.getElementById(i) && document.getElementById(i).getAttribute('title')]));
+    await ev(p, () => LADDER.go(1)); await sleep(80); await p.click('#tray-cell'); await p.waitForSelector('#pile-cell-1'); await sleep(80);
+    const t1 = await ev(p, () => [document.querySelector('#tray-cell').title, document.querySelector('#pile-cell-1').title, document.querySelector('#bench').hasAttribute('title')]);
+    await p.close();
+    ok('tooltips: Joseph\'s text as title on static controls, parts, terminals (pattern specificity: -pos/-neg beat *-*), SVG <title> on wires; aria-labels kept',
+      statOk && dynOk && t8.every(([i, v]) => v === TIPS['#' + i]) && t1[0] === TIPS['#tray-cell'] && t1[1] === TIPS['#pile-cell-*'] && !t1[2] && /\S/.test(t.aria || '') && t.sel === TIPS['#term-*-pos'],
+      JSON.stringify({ stat: t.stat.filter(([i, v]) => v !== want(i)), dyn: t.dyn, t8, t1, aria: t.aria })); }
 
   // ---------- 13. unlock flow end to end + reset ----------
   p = await open('', { clear: true });

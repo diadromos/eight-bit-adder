@@ -53,7 +53,8 @@ body.ladder-page{max-width:none;margin:0;padding:0;min-height:100vh;color:#f1dcb
 .tray-item .thumb svg{max-width:64px;max-height:48px;width:auto;height:auto}
 .tray-item .tname{font:700 10px/1.05 var(--bn-serif);text-align:center;letter-spacing:.03em;text-shadow:0 1px 1px #000}
 .tray-item .tcount{position:absolute;top:2px;right:4px;font:800 10px var(--mono);color:var(--bn-amber)}
-.mthumb{display:block;zoom:.4}
+.mthumb{display:flex;justify-content:center;zoom:.4}
+.mthumb .module[data-kind=FULL],.mthumb .module[data-kind=HALF]{zoom:.74}
 .mthumb .module{min-width:0;pointer-events:none}
 .tray-ghost{position:fixed;z-index:1000;pointer-events:none;transform:translate(-50%,-50%) scale(1.3);opacity:.9;filter:drop-shadow(0 10px 10px rgba(0,0,0,.5))}
 .tray-ghost svg{max-width:80px;max-height:70px}

@@ -23,7 +23,7 @@ Drag parts from the tray, or tap one to place it. Wire them by tapping or draggi
 
 Progress is saved in `localStorage`. **Reset progress** clears it, but step 1 always stays open. `?unlock=all` opens every step, and `?step=N` jumps to one. Sound is off until you turn it on. **Calm motion**, or the system's reduced-motion setting, stops the animations.
 
-The step text comes word for word from [docs/ladder-text.md](docs/ladder-text.md). The art is Henri's (`design/bench/`) and the sounds are Michael's (`design/sounds/`).
+The step text comes word for word from [docs/ladder-text.md](docs/ladder-text.md), and the tooltips from [docs/ladder-tooltips.json](docs/ladder-tooltips.json) (exact `#id` keys first, then the most specific `*` pattern). The art is Henri's (`design/bench/`) and the sounds are Michael's (`design/sounds/`).
 
 ## The classic simulator (`classic.html`)
 
@@ -122,6 +122,7 @@ eight-bit-adder/
 ├── docs/
 │   ├── page-text.md         on-page paragraphs and truth tables (read by the page)
 │   ├── ladder-text.md       step text for the ladder (read verbatim by index.html)
+│   ├── ladder-tooltips.json tooltips for the ladder's controls, parts, screws and wires, keyed by #id or pattern
 │   └── tooltips.json        tooltip text for every control, keyed by #id (read by the page)
 ├── design/
 │   ├── style.css            the visual style
