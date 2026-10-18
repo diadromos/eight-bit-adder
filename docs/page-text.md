@@ -19,14 +19,24 @@ Switch states:
 | open | off (0) |
 | closed | on (1) |
 
+```html
+<table>
+  <thead><tr><th>Switch</th><th>Lamp</th></tr></thead>
+  <tbody>
+    <tr><td>open</td><td>off (0)</td></tr>
+    <tr><td>closed</td><td>on (1)</td></tr>
+  </tbody>
+</table>
+```
+
 ## Stage 1: Gates
 
-A gate is a few switches wired so the lamp answers a simple question about its inputs. AND puts two switches in a row, so the lamp lights only when A and B are both on. OR puts them side by side, so either one will do. NOT uses a switch that is normally closed: pushing it breaks the circuit, so the output is the opposite of the input. XOR means one or the other, but not both. It is built from the other three: (A OR B) AND NOT (A AND B).
+A gate is a few switches wired so the lamp answers a simple question about its inputs. AND puts two switches in a row, so the lamp lights only when A and B are both on. OR puts them side by side, so either one will do. NOT uses a normally-closed relay: turning its input on pulls the switch open, so the output is the opposite of the input. XOR means one or the other, but not both. It is built from the other three: (A OR B) AND NOT (A AND B).
 
 HTML to paste:
 
 ```html
-<p>A gate is a few switches wired so the lamp answers a simple question about its inputs. AND puts two switches in a row, so the lamp lights only when A and B are both on. OR puts them side by side, so either one will do. NOT uses a switch that is normally closed: pushing it breaks the circuit, so the output is the opposite of the input. XOR means one or the other, but not both. It is built from the other three: (A OR B) AND NOT (A AND B).</p>
+<p>A gate is a few switches wired so the lamp answers a simple question about its inputs. AND puts two switches in a row, so the lamp lights only when A and B are both on. OR puts them side by side, so either one will do. NOT uses a normally-closed relay: turning its input on pulls the switch open, so the output is the opposite of the input. XOR means one or the other, but not both. It is built from the other three: (A OR B) AND NOT (A AND B).</p>
 ```
 
 ### Gate truth tables
@@ -134,12 +144,12 @@ HTML to paste:
 
 ## Modules built from modules
 
-Once a gate works, you don't need to watch its switches anymore. Package it, and it becomes a single block with inputs and an output. The half adder is built from gate blocks, the full adder from half adder blocks, and the 8-bit adder from full adder blocks. Engineers call this abstraction: once you trust a part, you think about what it does, not how it does it. Nothing is hidden for good, though. Expand any block to open it back up, layer by layer, all the way down to switches.
+Once a gate works, you don't need to watch its switches anymore. Package it, and it becomes a single block with inputs and an output. The half adder is built from gate blocks, the full adder from half adder blocks, and the 8-bit adder from full adder blocks. Engineers call this abstraction: once you trust a part, you think about what it does, not how it does it. Nothing is hidden for good, though. Expand any block to open it back up: the adders open down to their gates, and the Gates stage opens all the way down to switches.
 
 HTML to paste:
 
 ```html
-<p>Once a gate works, you don't need to watch its switches anymore. Package it, and it becomes a single block with inputs and an output. The half adder is built from gate blocks, the full adder from half adder blocks, and the 8-bit adder from full adder blocks. Engineers call this abstraction: once you trust a part, you think about what it does, not how it does it. Nothing is hidden for good, though. Expand any block to open it back up, layer by layer, all the way down to switches.</p>
+<p>Once a gate works, you don't need to watch its switches anymore. Package it, and it becomes a single block with inputs and an output. The half adder is built from gate blocks, the full adder from half adder blocks, and the 8-bit adder from full adder blocks. Engineers call this abstraction: once you trust a part, you think about what it does, not how it does it. Nothing is hidden for good, though. Expand any block to open it back up: the adders open down to their gates, and the Gates stage opens all the way down to switches.</p>
 ```
 
 ## Stage 2: Half adder

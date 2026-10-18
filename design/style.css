@@ -18,6 +18,8 @@
   --carry-1:#ffc247;
   --t:120ms;                   /* signal transition */
   --ripple-step:220ms;         /* per-bit ripple delay (slow mode can raise it) */
+  --side-w:384px;              /* desktop left column */
+  --coin:40px;                 /* desktop coin width (phone coins flex) */
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{-webkit-text-size-adjust:100%}
@@ -138,9 +140,22 @@ footer{margin:16px 0 0;padding:14px;border-radius:18px;background:var(--card);co
 /* ---------- desktop ---------- */
 @media (min-width:900px){
   body{padding:20px 28px 28px}
-  .top{display:grid;grid-template-columns:minmax(340px,400px) minmax(0,1fr);gap:16px;align-items:start}
-  .operand{grid-template-columns:28px 1fr;align-items:center;gap:8px}
-  .operand>.name{font-size:16px;text-align:center}
+  /* Left column: fixed 384px. The A/B label sits ABOVE the coins (same as phone) and the coins are a
+     fixed 40x48 with a 4+4 nibble split, so 8 coins + gaps = 354px fit without widening the column.
+     (Replaces app.css's minmax(410px,440px) override; see CHANGES-2.md.) */
+  .top{display:grid;grid-template-columns:var(--side-w) minmax(0,1fr);gap:16px;align-items:start}
+  .operand{grid-template-columns:1fr;gap:4px}
+  .operand>.name{font-size:14px}
+  .bits{gap:3px;justify-content:flex-start}
+  .bits .nib{flex:0 0 10px;width:10px}
+  .bit{flex:0 0 var(--coin);width:var(--coin);max-width:var(--coin);height:48px}
+  .bit::after{inset:-2px -2px}                           /* 44x52 hit area (gaps are 3px) */
+  .panel .operand>.nums{grid-column:1/-1}                /* neutralises app.css .operand .nums{grid-column:2} */
+  .panel .operand.single .bit{flex:0 0 52px;width:52px;max-width:52px}
+  /* gate-level 8-bit view (Ken's body.wide): stack, controls in a row of three on top */
+  body.wide .top{grid-template-columns:minmax(0,1fr)}
+  body.wide .side{display:grid;grid-template-columns:var(--side-w) minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:stretch}
+  body.wide .side>.panel{margin:0}
   .chain.row{flex-direction:row;align-items:stretch;gap:0}   /* DOM order bit7..bit0, so bit 0 sits at the right */
   .chain.row .fa{grid-template-columns:1fr;justify-items:center;text-align:center;padding:10px 4px;gap:8px;flex:1 1 0;min-width:0}
   .chain.row .fa .out{flex-direction:column;gap:4px}

@@ -9,8 +9,8 @@
   /* ---- UI strings that are not Joseph's (control labels / status). PLACEHOLDER wording, easy to replace. ---- */
   const UI = {
     showSymbol: 'Show symbol', showSwitches: 'Show switches',
-    stepInfo: (n, m) => `Gate delay ${n} of ${m}`,
-    speed: ms => `${ms} ms per gate`,
+    stepInfo: (n, m) => `Step ${n} of ${m}`,
+    speed: ms => `${ms} ms per step`,
     views: { gates: ['Module', 'Gate symbol', 'Switches'], half: ['Module', 'Gates'], full: ['Module', 'Half adders + OR', 'Gates'], ripple: ['Full adder modules', 'Gates'] },
     view: v => `View: ${v}`
   };
