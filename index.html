@@ -85,7 +85,7 @@
     <h2 data-title="Stage 4">Stage 4</h2><div class="swap" id="draw-ripple"></div><div class="explain" data-sec="Stage 4"></div>
   </section>
   <section class="panel" id="zoompanel" data-for="ripple">
-    <h2>Zoom <label class="zoompick">bit <select id="zoom"><option value="7">7</option><option value="6">6</option><option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option><option value="0">0</option></select></label></h2>
+    <h2>Zoom <label class="zoompick"><select id="zoom" aria-label="Bit to zoom"><option value="7">Bit 7</option><option value="6">Bit 6</option><option value="5">Bit 5</option><option value="4">Bit 4</option><option value="3">Bit 3</option><option value="2">Bit 2</option><option value="1">Bit 1</option><option value="0">Bit 0</option></select></label> <span class="muted" style="text-transform:none;letter-spacing:0">full adder</span></h2>
     <div class="detail-row"><div class="detail" id="draw-zoom"></div><div><div class="tt" id="tt-zoom"></div></div></div>
     <div class="explain" data-sec="Zoom"></div>
   </section>
@@ -93,6 +93,8 @@
 </div>
 <script src="design/gates/gates.js"></script>
 <script src="design/parts/parts.js"></script>
+<script src="design/wires.js"></script>
+<script src="design/transitions.js"></script>
 <script src="js/sim.js"></script>
 <script src="js/text.js"></script>
 <script src="js/draw.js"></script>

@@ -99,7 +99,7 @@ for(const depth of [0,1]){
 p=await open(`?stage=ripple&mode=step&depth=${depth}`);
 await p.evaluate(()=>APP.setAB(127,1,0));
 const known=[];let steps=0;
-const snap=()=>p.evaluate(()=>{const o={};for(let i=1;i<=8;i++){const e=document.querySelector(`#stage-ripple [data-w="c${i}"]`);o[i]=!e?'none':e.classList.contains('x')?'?':e.classList.contains('on')?'1':'0'}return o});
+const snap=()=>p.evaluate(()=>{const o={};for(let i=1;i<=8;i++){const e=document.querySelector(`#stage-ripple [data-w="c${i}"]`);o[i]=!e?'none':e.classList.contains('unknown')?'?':e.classList.contains('on')?'1':'0'}return o});
 let s=await snap();
 while(await p.evaluate(()=>!document.querySelector('#step').disabled)&&steps<40){await p.click('#step');steps++;s=await snap();for(let i=1;i<=8;i++)if(known[i]===undefined&&s[i]!=='?')known[i]=steps;}
 const fin=await p.evaluate(()=>({sum:document.querySelector('#sum').dataset.value,co:document.querySelector('#cout').dataset.value,ov:document.querySelector('#overflow').dataset.value,settled:document.body.dataset.settled,info:document.querySelector('#stepInfo').textContent}));
@@ -111,7 +111,7 @@ await p.close();}
 p=await open('?stage=ripple&mode=slow&depth=1');
 await p.evaluate(()=>{document.querySelector('#speed').value=740;document.querySelector('#speed').dispatchEvent(new Event('input'));APP.setAB(127,1,0)});
 const times={};const t0=Date.now();let unknownSeen=0;
-while(Date.now()-t0<4000){const st=await p.evaluate(()=>{const o={};for(let i=1;i<=8;i++){const e=document.querySelector(`#stage-ripple [data-w="c${i}"]`);o[i]=e.classList.contains('x')?'?':e.classList.contains('on')?'1':'0'}o.x=document.querySelectorAll('#stage-ripple .wire.x').length;o.settled=document.body.dataset.settled;return o});
+while(Date.now()-t0<4000){const st=await p.evaluate(()=>{const o={};for(let i=1;i<=8;i++){const e=document.querySelector(`#stage-ripple [data-w="c${i}"]`);o[i]=e.classList.contains('unknown')?'?':e.classList.contains('on')?'1':'0'}o.x=document.querySelectorAll('#stage-ripple .wire.unknown').length;o.settled=document.body.dataset.settled;return o});
  if(st.x>0)unknownSeen=Math.max(unknownSeen,st.x);for(let i=1;i<=8;i++)if(st[i]!=='?'&&times[i]===undefined)times[i]=Date.now()-t0;if(st.settled==='1')break;await sleep(15);}
 const tv=Object.values(times);
 ok('slow mode: unsettled wires dimmed, carry settles bit0->bit7 in time order, ends settled',unknownSeen>0&&tv.length===8&&tv.every((v,k)=>k===0||v>=tv[k-1])&&tv[7]>tv[0]&&await p.evaluate(()=>document.querySelector('#sum').dataset.value==='128'),`max dim wires ${unknownSeen}, carry ms ${JSON.stringify(times)}`);
@@ -127,8 +127,8 @@ ok('no horizontal page overflow at 390 and 1280 (all stages/depths)',lay.every(x
 for(const w of [390,1280]){p=await open('?stage=ripple&mode=instant',w);
  const sz=await p.evaluate(()=>[...document.querySelectorAll('#inputs .bit:not([hidden])')].filter(e=>e.offsetParent).map(e=>{const r=e.getBoundingClientRect();return [e.id,Math.round(r.width*10)/10,Math.round(r.height)]}));
  const small=sz.filter(([,w,h])=>w<40||h<40);ok(`bit toggles >= 40px at ${w}`,small.length===0&&sz.length===17,`${sz.length} toggles, min width ${Math.min(...sz.map(s=>s[1]))}px${small.length?' small: '+JSON.stringify(small):''}`);
- if(w===390){const sc=await p.evaluate(async()=>{APP.setDepth(1);await new Promise(r=>setTimeout(r,300));const s=document.querySelector('#rippleScroll');return {sw:s.scrollWidth,cw:s.clientWidth,left:s.scrollLeft,page:document.documentElement.scrollWidth}});
-  ok('390: 8-bit gate view scrolls inside its panel, page does not',sc.sw>sc.cw&&sc.page<=390,JSON.stringify(sc));}
+ if(w===390){const sc=await p.evaluate(async()=>{APP.setDepth(1);await new Promise(r=>setTimeout(r,300));const mid={page:document.documentElement.scrollWidth,vis:getComputedStyle(document.body).overflowX};await new Promise(r=>setTimeout(r,1200));const s=document.querySelector('#rippleScroll');return {sw:s.scrollWidth,cw:s.clientWidth,left:s.scrollLeft,page:document.documentElement.scrollWidth,mid}});
+  ok('390: 8-bit gate view scrolls inside its panel, page does not (page clipped while morph ghosts fly)',sc.sw>sc.cw&&sc.page<=390&&sc.mid.vis==='clip',JSON.stringify(sc));}
  await p.close();}
 
 // 7. inputs sync + controls
@@ -156,13 +156,53 @@ ok('prefers-reduced-motion defaults to Instant',r.join()==='instant,instant',r.j
 p=await open('?stage=ripple',1280);r=await p.evaluate(()=>APP.S.mode);ok('default mode without reduced motion',r==='slow',r);
 // tooltips coverage
 const tips=JSON.parse(fs.readFileSync('/workspace/eight-bit-adder/docs/tooltips.json','utf8'));
-r=await p.evaluate(tips=>{const miss=[],wrong=[];for(const k in tips){const e=document.querySelector(k);if(!e){miss.push(k);continue}if(e.getAttribute('title')!==tips[k])wrong.push(k)}return {miss,wrong}},tips);
-const r3=await p.evaluate(async()=>{APP.setStage('switch');await new Promise(r=>setTimeout(r,100));return document.querySelector('#sw').getAttribute('title')});
-ok(`all ${Object.keys(tips).length} tooltips applied verbatim`,r.miss.filter(k=>k!=='#sw').length===0&&r.wrong.filter(k=>k!=='#sw').length===0&&r3===tips['#sw'],JSON.stringify(r));
+// every id must exist and carry the exact text on at least one stage (#sw only exists while Stage 0 is drawn)
+r=await p.evaluate(async tips=>{const seen={},wrong=new Set();
+ for(const st of ['ripple','switch','gates','half','full']){APP.setStage(st);await new Promise(r=>setTimeout(r,80));
+  for(const k in tips){const e=document.querySelector(k);if(!e)continue;if(e.getAttribute('title')===tips[k])seen[k]=seen[k]||st;else wrong.add(k+'@'+st)}}
+ const miss=Object.keys(tips).filter(k=>!seen[k]);return {miss,wrong:[...wrong],sw:seen['#sw']||null}},tips);
+ok(`all ${Object.keys(tips).length} tooltips applied verbatim (every stage, incl. #sw on Stage 0)`,r.miss.length===0&&r.wrong.length===0&&r.sw==='switch',JSON.stringify(r));
 // click every control on every stage, looking for JS errors
 await p.evaluate(async()=>{const sl=ms=>new Promise(r=>setTimeout(r,ms));for(const st of ['switch','gates','half','full','ripple']){APP.setStage(st);await sl(50);
  for(const m of ['slow','step','instant']){APP.setMode(m);for(const e of document.querySelectorAll('button:not([disabled])'))if(e.offsetParent&&!e.closest('.tabs'))e.click();await sl(30);document.querySelector('#step').click()}
  for(const id of ['#package','#expand','#expand','#symbolToggle']){const e=document.querySelector(id);if(e.offsetParent&&!e.disabled)e.click();await sl(950)}}});
+await p.close();
+
+// 9. Henri pass 2: morphSwap (normal + reduced motion), schematic bit map, selected card <-> zoom
+async function morphRun(reduce){
+ const pp=await open('?stage=half&mode=instant',1280,reduce?async p=>p.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]):null);
+ return pp.evaluate(async()=>{const sl=ms=>new Promise(r=>setTimeout(r,ms));const log=[];const orig=window.morphSwap;
+  window.morphSwap=(c,f,o)=>{const pr=orig(c,f,o);const e={id:c.id,dir:o&&o.dir,ok:null,kf:c.getAnimations().map(a=>Object.keys(a.effect.getKeyframes()[0]).filter(k=>!['offset','easing','composite','computedOffset'].includes(k)).join('+')),ghosts:document.querySelectorAll('.morph-ghost').length};
+   log.push(e);pr.then(()=>e.ok=true,err=>e.ok='ERR '+err);return pr};
+  const go=async(st,d)=>{APP.setStage(st);await sl(60);APP.setDepth(d);await sl(900)};
+  await go('half',0);await go('half',1);await go('full',0);APP.setDepth(2);await sl(900);APP.setDepth(1);await sl(900);
+  await go('ripple',1);APP.setDepth(0);await sl(1000);
+  document.querySelector('#expand').click();await sl(1000);document.querySelector('.schem-close').click();await sl(1000);
+  return {log,ghostsLeft:document.querySelectorAll('.morph-ghost').length,depth:APP.S.depth.ripple,chain:!!document.querySelector('#chain .fa')}});}
+r=await morphRun(false);
+ok('morphSwap runs on stages 2-4 (expand + collapse, incl. schematic Close), resolves, no ghosts left',r.log.length===9&&r.log.every(e=>e.ok===true&&(e.dir==='expand'||e.dir==='collapse'))&&r.log.some(e=>e.ghosts>0)&&r.ghostsLeft===0&&r.depth===0&&r.chain,JSON.stringify(r.log.map(e=>e.id+':'+e.dir+':'+e.ok)));
+r=await morphRun(true);
+ok('reduced motion: morphSwap is a plain opacity cross-fade (no ghosts, no transforms)',r.log.length===9&&r.log.every(e=>e.ok===true&&e.ghosts===0&&e.kf.length>0&&e.kf.every(k=>k==='opacity')),JSON.stringify(r.log.map(e=>e.id+':'+e.kf.join(','))));
+for(const w of [390,1280]){p=await open('?stage=ripple&depth=1&mode=instant&a=127&b=1',w);
+ r=await p.evaluate(async()=>{const sl=ms=>new Promise(r=>setTimeout(r,ms));const cv=document.querySelector('.schem-canvas');const res=[];
+  const cards=document.querySelectorAll('.cell-bg[data-bit]').length,chips=document.querySelectorAll('.schem-map button[data-bit]').length;
+  for(const i of [7,4,3,0]){document.querySelectorAll('.cell-bg.flash').forEach(e=>e.classList.remove('flash'));document.querySelector(`.schem-map button[data-bit="${i}"]`).click();await sl(900);
+   const c=document.querySelector(`.cell-bg[data-bit="${i}"]`),cr=cv.getBoundingClientRect(),r=c.getBoundingClientRect(),g=document.querySelector(`g.cell[data-bit="${i}"]`).getBoundingClientRect();
+   const inView=r.left>=cr.left-2&&r.right<=cr.right+2,centred=Math.abs((r.left+r.right)/2-(cr.left+cr.right)/2)<=Math.max(4,(cr.width-r.width)/2+4);
+   const others=[...document.querySelectorAll('.cell-bg.flash')].map(e=>+e.dataset.bit);
+   res.push({i,inView,centred,flash:c.classList.contains('flash')&&others.length===1&&others[0]===i,cardHoldsCell:r.left<=g.left+1&&r.right>=g.right-1,chipVis:document.querySelector(`.schem-map button[data-bit="${i}"]`).classList.contains('vis')});}
+  return {cards,chips,scrolls:cv.scrollWidth>cv.clientWidth,res}});
+ ok(`${w}: schematic bit map jumps to the right adder (bits 7,4,3,0)`,r.cards===8&&r.chips===8&&r.res.every(x=>x.inView&&x.flash&&x.cardHoldsCell&&x.chipVis&&(!r.scrolls||x.centred)),JSON.stringify(r));
+ await p.close();}
+p=await open('?stage=ripple&mode=instant&a=127&b=1',1280);
+r=await p.evaluate(async()=>{const sl=ms=>new Promise(r=>setTimeout(r,ms));const out=[];
+ const state=()=>{const sel=[...document.querySelectorAll('#chain .fa.selected')].map(e=>+e.dataset.bit),cur=[...document.querySelectorAll('#chain .fa[aria-current=true]')].map(e=>+e.dataset.bit);
+  return {zoom:APP.S.zoom,select:document.querySelector('#zoom').value,sel,cur,exp:document.querySelectorAll('#chain .fa[aria-expanded]').length,lbl:document.querySelector('#draw-zoom [data-lbl]').textContent}};
+ for(const i of [7,3,0]){const z=document.querySelector('#zoom');z.value=String(i);z.dispatchEvent(new Event('change'));await sl(50);out.push(state())}
+ document.querySelector('#chain .fa[data-bit="5"]').click();await sl(50);out.push(state());
+ document.querySelector('#chain .fa[data-bit="2"]').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));await sl(50);out.push(state());
+ return out});
+ok('.selected + aria-current follow the zoom bit (select, click, Enter); no aria-expanded',r.map(x=>x.zoom).join()==='7,3,0,5,2'&&r.every(x=>x.select===String(x.zoom)&&x.sel.join()===String(x.zoom)&&x.cur.join()===String(x.zoom)&&x.exp===0&&x.lbl.startsWith('A'+x.zoom+'=')),JSON.stringify(r));
 await p.close();
 ok('no JS errors / console errors in any test',errs.length===0,errs.slice(0,5).join(' | '));
 fs.writeFileSync('/tmp/mothtest/adder-results.json',JSON.stringify(R,null,1));

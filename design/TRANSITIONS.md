@@ -66,3 +66,28 @@ function run(dir) {          // dir: 'collapse' | 'expand'
 
 ## Reduced motion
 With `prefers-reduced-motion: reduce`, skip the timeline: swap the layers with a 150 ms opacity cross-fade (or an instant swap). The `.flow` dashes and `.rippling` animation are also disabled in `style.css`.
+
+## Drop-in helper: `design/transitions.js` (review 2)
+Classic script. It sets `window.morphSwap`, `window.morphExpand`, `window.morphCollapse` (also `window.TRANSITIONS`) and implements the recipe above with FLIP + Web Animations. It only animates transform, opacity, filter and stroke-dashoffset, plus the container's height so the text below doesn't jump. With `prefers-reduced-motion: reduce`, every call becomes a 150 ms cross-fade.
+
+**Stages 2–4 (content re-rendered with innerHTML):** use `morphSwap(container, render, { dir })` instead of `swapAnim`:
+```js
+// in drawStage(st, animate) where animate is 'expand' | 'collapse' | falsy
+const swap = (el, html) => animate ? morphSwap(el, () => { el.innerHTML = html; }, { dir: animate }) : (el.innerHTML = html);
+if (st === 'half') swap($('#draw-half'), d ? D.halfGates() : D.halfModule());
+if (st === 'full') swap($('#draw-full'), d ? D.fullGates(d) : D.fullModule());
+// stage 4: build the schematic frame inside the render callback
+morphSwap($('#draw-ripple'), () => { $('#draw-ripple').innerHTML = html; const sc = $('#rippleScroll'); if (sc) WIRES.schematic(sc, { onClose: () => setDepth(0) }); }, { dir: animate });
+// setDepth: drawStage(st, nd > od ? 'expand' : 'collapse')
+```
+- **First:** it snapshots the old content as an absolutely positioned ghost.
+- **Last:** it calls `render()`, then measures in a microtask, so layout changes later in the same click handler (`body.wide`) are included.
+- **Invert/Play:**
+  - *expand*: the ghost grows toward the new drawing and fades (**in**). The new drawing scales in from the old module's rect (**out**). Then wires draw in (`stroke-dashoffset`, 60 ms per column, right-to-left for `.ripple-gates`).
+  - *collapse*: the old insides shrink and blur toward the module (**in**). The module grows from the old insides' rect (**spring**). Pins slide out with a 40 ms stagger, and the title icon fades in.
+  - *matched pieces* (`opts.match`, default `data-bit`): on stage 4 the 8 chain cards fly into their 8 gate cells (uniform scale, **inout**, 18 ms stagger) and back.
+- A new call cancels a running one and removes all ghosts. Options: `duration` (base, default 300; the whole morph is ~520–650 ms), `match`, `height:false`.
+
+**Two live elements (stage 1 layers):** `morphCollapse(fromEl, toEl, { onSwap })` / `morphExpand(…)`. `toEl` must be laid out (`visibility:hidden` is fine). `onSwap()` runs once at the start and should make `toEl` visible. Ken's own `js/levels.js` already does this three-layer sequence well, so keep it; the pair helpers are for anything new.
+
+Frames from the real app: `review-morph-half.png` (stage 2 expand and package at 0/100/200/320/700 ms) and `review-morph-ripple.png` (stage 4 cards → gate level at 0/120/240/380/700 ms).

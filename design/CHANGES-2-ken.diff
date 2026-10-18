@@ -1,0 +1,148 @@
+--- a/css/app.css
++++ b/css/app.css
+@@ -7,21 +7,12 @@
+ .side,.main{min-width:0}
+ .main>.panel,.side>.panel{min-width:0}
+ @media (min-width:900px){
+-  /* wider left column so the 8 bit coins stay >= 40px wide */
+-  .top{grid-template-columns:minmax(410px,440px) minmax(0,1fr)}
+-  /* 8-bit gate view: controls in a row on top, schematic full width */
+-  body.wide .top{grid-template-columns:minmax(0,1fr)}
+-  body.wide .side{display:grid;grid-template-columns:minmax(410px,440px) minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+ }
+ 
+ /* ---- inputs ---- */
+ #inputs{padding:12px 10px}
+ .pair{display:flex;gap:18px;flex-wrap:wrap;margin-top:8px}
+-.operand.single{grid-template-columns:auto!important;justify-items:start}
+-.operand.single .bits{justify-content:flex-start}
+-.operand.single .bit{flex:0 0 52px;min-width:52px}
+ .nums{display:flex;gap:10px;flex-wrap:wrap;margin-top:2px}
+-@media (min-width:900px){.operand .nums{grid-column:2}}
+ .nums label{display:inline-flex;align-items:center;gap:6px;font:700 13px var(--font);color:var(--muted)}
+ .nums input{font:700 16px var(--mono);width:76px;min-height:var(--tap);padding:0 10px;text-align:center;color:var(--ink);
+   background:var(--inset);border:0;border-radius:16px;box-shadow:inset 0 2px 4px rgba(0,0,0,.45)}
+@@ -57,28 +48,15 @@
+ #draw-half svg.circ{max-width:520px}
+ #draw-full svg.circ,#draw-zoom svg.circ{max-width:600px}
+ .halo{fill:none;stroke:var(--inset);stroke-width:8;stroke-linecap:round;stroke-linejoin:round}
+-.wire.gnd{stroke:var(--wire-0)}
+-.jdot{fill:var(--wire-0);transition:fill var(--t)} .jdot.on{fill:var(--wire-1)}
+ .val{font:800 10px var(--mono);fill:var(--muted)} .val.on{fill:var(--wire-1)}
+ .bitl{font:800 13px var(--font);fill:var(--muted)}
+-.habox{fill:none;stroke:var(--muted);stroke-width:1.2;stroke-dasharray:4 5;opacity:.55}
+-.hal{font:700 8px var(--font);fill:var(--muted);opacity:.8}
+ .hablock{fill:var(--card2);stroke:var(--wire-0);stroke-width:2}
+ .hbl{font:800 10px var(--font);fill:var(--ink)}
+-/* unknown (not settled yet) in Slow / Step mode */
+-.wire.x,.carry.x{stroke-dasharray:1 7;opacity:.55;filter:none}
+-.gate.x{opacity:.4;filter:none}
+ .pin.x,.jdot.x,.lbl.x,.val.x{opacity:.5}
+ .dot.x,.s.x,.co.x,.clbl.x{opacity:.45}
+-/* just settled this gate delay */
+-.wire.fresh.on{stroke-width:4.5;filter:drop-shadow(0 0 6px var(--glow-1))}
+-.wire.fresh:not(.on){stroke:#7c879b}
+ .swhit{cursor:pointer;outline:none}
+ .swhit:focus-visible rect{stroke:var(--ring);stroke-width:3}
+ .ripple-gates .wire{stroke-width:3.4}
+-.scrollx{overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+-.scrollx svg.ripple-gates{min-width:1100px}
+-@media (min-width:900px){.scrollx svg.ripple-gates{min-width:0}}
+ .fa{cursor:pointer}
+ 
+ /* stage 1: three stacked levels (grid stacking keeps the height steady) */
+--- a/index.html
++++ b/index.html
+@@ -85,7 +85,7 @@
+     <h2 data-title="Stage 4">Stage 4</h2><div class="swap" id="draw-ripple"></div><div class="explain" data-sec="Stage 4"></div>
+   </section>
+   <section class="panel" id="zoompanel" data-for="ripple">
+-    <h2>Zoom <label class="zoompick">bit <select id="zoom"><option value="7">7</option><option value="6">6</option><option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option><option value="0">0</option></select></label></h2>
++    <h2>Zoom <label class="zoompick"><select id="zoom" aria-label="Bit to zoom"><option value="7">Bit 7</option><option value="6">Bit 6</option><option value="5">Bit 5</option><option value="4">Bit 4</option><option value="3">Bit 3</option><option value="2">Bit 2</option><option value="1">Bit 1</option><option value="0">Bit 0</option></select></label> <span class="muted" style="text-transform:none;letter-spacing:0">full adder</span></h2>
+     <div class="detail-row"><div class="detail" id="draw-zoom"></div><div><div class="tt" id="tt-zoom"></div></div></div>
+     <div class="explain" data-sec="Zoom"></div>
+   </section>
+@@ -93,6 +93,8 @@
+ </div>
+ <script src="design/gates/gates.js"></script>
+ <script src="design/parts/parts.js"></script>
++<script src="design/wires.js"></script>
++<script src="design/transitions.js"></script>
+ <script src="js/sim.js"></script>
+ <script src="js/text.js"></script>
+ <script src="js/draw.js"></script>
+--- a/js/app.js
++++ b/js/app.js
+@@ -96,7 +96,7 @@
+     $$('#chain .fa').forEach(fa => {
+       const i = +fa.dataset.bit, ci = net.get(v, 'c' + i), co = net.get(v, 'c' + (i + 1));
+       fa.classList.toggle('active', animating() && ci >= 0 && co < 0);
+-      fa.setAttribute('aria-expanded', i === S.zoom ? 'true' : 'false');
++      fa.classList.toggle('selected', i === S.zoom); if (i === S.zoom) fa.setAttribute('aria-current', 'true'); else fa.removeAttribute('aria-current');
+       if (animating() && net.levelOf('c' + (i + 1)) === S.L) { fa.classList.remove('pulse'); void fa.offsetWidth; fa.classList.add('pulse'); }
+       if (!animating()) fa.classList.remove('pulse');
+     });
+@@ -150,16 +150,18 @@
+       $('#gateB').closest('.operand').hidden = S.gate === 'NOT';
+       fillGateTables();
+     }
+-    if (st === 'half') { $('#draw-half').innerHTML = d ? D.halfGates() : D.halfModule(); if (animate) swapAnim($('#draw-half')); }
+-    if (st === 'full') { $('#draw-full').innerHTML = d ? D.fullGates(d) : D.fullModule(); if (animate) swapAnim($('#draw-full')); }
++    const swap = (el, html) => animate ? window.morphSwap(el, () => { el.innerHTML = html; }, { dir: animate }) : (el.innerHTML = html);
++    if (st === 'half') swap($('#draw-half'), d ? D.halfGates() : D.halfModule());
++    if (st === 'full') swap($('#draw-full'), d ? D.fullGates(d) : D.fullModule());
+     if (st === 'ripple') {
+-      $('#draw-ripple').innerHTML = d ? `<div class="detail scrollx" id="rippleScroll">${D.rippleGates()}</div>` : D.rippleChain();
++      const html = d ? `<div class="detail scrollx" id="rippleScroll">${D.rippleGates()}</div>` : D.rippleChain();
++      const after = () => { const sc0 = $('#rippleScroll'); if (sc0) window.WIRES.schematic(sc0, { onClose: () => setDepth(0) }); };
++      if (animate) window.morphSwap($('#draw-ripple'), () => { $('#draw-ripple').innerHTML = html; after(); }, { dir: animate }); else { $('#draw-ripple').innerHTML = html; after(); }
+       $$('#chain .fa').forEach(fa => {
+         const pick = () => setZoom(+fa.dataset.bit);
+         fa.addEventListener('click', pick); fa.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+       });
+       const sc = $('#rippleScroll'); if (sc) sc.scrollLeft = sc.scrollWidth;      // bit 0 / carry-in side first on phones
+-      if (animate) swapAnim($('#draw-ripple'));
+       $('#draw-zoom').innerHTML = D.zoomFA(S.zoom);
+     }
+     updateModbar();
+@@ -174,7 +176,7 @@
+       const layers = { stage: $('#lvstage'), circuit: $('#lv-circuit'), gate: $('#lv-gate'), module: $('#lv-module') };
+       window.LEVELS.go(layers, od, nd, showLevel);
+       updateModbar(); render();
+-    } else { drawStage(st, true); render(); }
++    } else { drawStage(st, nd > od ? 'expand' : 'collapse'); render(); }
+   }
+   function updateModbar() {
+     const st = S.stage; if (!(st in S.depth)) return;
+--- a/js/draw.js
++++ b/js/draw.js
+@@ -58,6 +58,7 @@
+       PART('battery', 10, 20) + relay('relay-nc', 110, 20, 'A', 'A') + PART('lamp', 310, 20, "data-lamp='out'"));
+     // XOR = (A OR B) AND NOT (A AND B): top row A,B in series drive the coil of a normally-closed relay;
+     // A,B in parallel feed that NC contact, then the lamp.
++    if (root.PARTS['xor-relay']) return svg('0 0 548 516', root.PARTS['xor-relay'].replace('<svg ', "<svg x='0' y='0' "));
+     return svg('0 0 520 410',
+       W('M70 200 H90', 'one', '', 'out') + W('M90 40 V300', 'one') + J(90, 200, 'one') + J(90, 170, 'one') +
+       W('M90 40 H110', 'one') + W('M170 40 H210', 'A') + W('M270 40 H290 V240 H354 V210', 'a1') +
+@@ -113,7 +114,7 @@
+       J(42, 32, n.a) + J(30, 48, n.b) + J(148, 128, n.c) + J(136, 52, n.x1) +
+       G('xor', 60, 20, n.x1, [n.a, n.b]) + G('and', 60, 90, n.a1, [n.a, n.b]) + G('xor', 160, 40, n.s, [n.x1, n.c]) +
+       G('and', 160, 100, n.a2, [n.x1, n.c]) + G('or', 240, 100, n.co, [n.a2, n.a1]);
+-    if (o.boxes === 'dashed') s = `<rect class="habox" x="52" y="22" width="76" height="118" rx="14"/><rect class="habox" x="152" y="40" width="76" height="108" rx="14"/>` + s;
++    if (o.boxes === 'dashed') s = root.WIRES.group(52, -4, 76, 144, 'Half 1') + root.WIRES.group(152, 14, 76, 136, 'Half 2') + s;
+     if (o.boxes === 'solid') s += `<rect class="hablock" data-w="${n.x1}" x="64" y="14" width="52" height="122" rx="12"/><text class="hbl" x="90" y="72" text-anchor="middle">Half</text><text class="hbl" x="90" y="86" text-anchor="middle">adder</text>` +
+       `<rect class="hablock" data-w="${n.s}" x="164" y="34" width="52" height="112" rx="12"/><text class="hbl" x="190" y="86" text-anchor="middle">Half</text><text class="hbl" x="190" y="100" text-anchor="middle">adder</text>`;
+     if (o.pins) s += P(14, 32, n.a) + P(14, 48, n.b) + P(14, 142, n.c) + P(316, 60, n.s) + P(316, 120, n.co);
+@@ -126,10 +127,10 @@
+   }
+   const FA_FULL = { a: 'A', b: 'B', c: 'Cin', x1: 'x1', a1: 'a1', s: 'S', a2: 'a2', co: 'Cout' };
+   const faNames = i => ({ a: 'a' + i, b: 'b' + i, c: 'c' + i, x1: 'f' + i + '.x1', a1: 'f' + i + '.a1', s: 's' + i, a2: 'f' + i + '.a2', co: 'c' + (i + 1) });
+-  function fullGates(depth) { return svg('0 0 340 165', faBody(FA_FULL, { pins: 1, labels: 1, vals: 1, boxes: depth === 1 ? 'solid' : 'dashed' })); }
++  function fullGates(depth) { return svg(depth === 1 ? '0 0 340 165' : '0 -14 340 179', faBody(FA_FULL, { pins: 1, labels: 1, vals: 1, boxes: depth === 1 ? 'solid' : 'dashed' })); }
+   const fullModule = () => moduleBox('Full adder', [['A', 'A'], ['B', 'B'], ['Cin', 'Cin']], [['S', 'Sum'], ['Cout', 'Cout']], 'or');
+   function zoomFA(i) {
+-    return svg('0 0 340 165', faBody(faNames(i), { pins: 1, labels: 1, vals: 1, boxes: 'dashed', carry: 1,
++    return svg('0 -14 340 179', faBody(faNames(i), { pins: 1, labels: 1, vals: 1, boxes: 'dashed', carry: 1,
+       names: { a: 'A' + i, b: 'B' + i, c: 'c' + i, s: 'S' + i, co: 'c' + (i + 1) } }));
+   }
+ 

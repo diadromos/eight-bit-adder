@@ -34,12 +34,13 @@
   const animating = () => S.L !== Infinity;
 
   /* ---------------- render ---------------- */
+  // unsettled values get Henri's .unknown (design/style.css; the old .x is only kept there as an alias)
   function apply(root, net, v) {
     const val = n => (n in net.w ? net.get(v, n) : undefined);
     const anim = animating();
     $$('[data-w]', root).forEach(el => {
       const n = el.dataset.w, x = val(n); if (x === undefined) return;
-      el.classList.toggle('on', x === 1); el.classList.toggle('x', x < 0);
+      el.classList.toggle('on', x === 1); el.classList.toggle('unknown', x < 0);
       const fresh = anim && S.L > 0 && net.levelOf(n) === S.L;
       el.classList.toggle('fresh', fresh);
       if (el.classList.contains('carry')) el.classList.toggle('rippling', fresh && x === 1);
@@ -49,7 +50,7 @@
       el.textContent = (el.dataset.lbl ? el.dataset.lbl + '=' : '') + (x < 0 ? '?' : x); });
     $$('[data-o]', root).forEach(el => {
       const x = val(el.dataset.o), ins = el.dataset.i.split(',').map(val);
-      el.classList.toggle('on', x === 1); el.classList.toggle('x', x < 0);
+      el.classList.toggle('on', x === 1); el.classList.toggle('unknown', x < 0);
       const la = el.querySelector('.lead-a'), lb = el.querySelector('.lead-b');
       if (la) la.classList.toggle('on', ins[0] === 1);
       if (lb) lb.classList.toggle('on', ins[1] === 1);
@@ -89,14 +90,14 @@
     $('#cinSigned').textContent = S.cin ? ' + 1' : '';
     $('#sumSigned').textContent = known ? sg(r.sum) : '…';
     [['#cout', r.cout], ['#overflow', r.overflow]].forEach(([id, x]) => {
-      const el = $(id); el.classList.toggle('on', x === 1); el.classList.toggle('x', x === null); el.dataset.value = x === null ? '' : x; });
+      const el = $(id); el.classList.toggle('on', x === 1); el.classList.toggle('unknown', x === null); el.dataset.value = x === null ? '' : x; });
   }
 
   function renderChainState(net, v) {
     $$('#chain .fa').forEach(fa => {
       const i = +fa.dataset.bit, ci = net.get(v, 'c' + i), co = net.get(v, 'c' + (i + 1));
       fa.classList.toggle('active', animating() && ci >= 0 && co < 0);
-      fa.setAttribute('aria-expanded', i === S.zoom ? 'true' : 'false');
+      fa.classList.toggle('selected', i === S.zoom); if (i === S.zoom) fa.setAttribute('aria-current', 'true'); else fa.removeAttribute('aria-current');
       if (animating() && net.levelOf('c' + (i + 1)) === S.L) { fa.classList.remove('pulse'); void fa.offsetWidth; fa.classList.add('pulse'); }
       if (!animating()) fa.classList.remove('pulse');
     });
@@ -130,11 +131,6 @@
   function schedule() { S.timer = setTimeout(() => { advance(); if (animating() && S.mode === 'slow') schedule(); }, S.delay); }
 
   /* ---------------- drawing per stage ---------------- */
-  function swapAnim(el) {
-    if (reduceMotion || !el.animate) return;
-    el.animate([{ opacity: 0, transform: 'scale(.96)' }, { opacity: 1, transform: 'none' }], { duration: 240, easing: 'cubic-bezier(.3,1.35,.6,1)' });
-    $$(':scope > *', el).forEach(c => c.animate && c.animate([{ opacity: 0 }, { opacity: 1 }], { delay: 120, duration: 160, fill: 'backwards' }));
-  }
   function drawStage(st, animate) {
     const D = window.DRAW, d = S.depth[st];
     if (st === 'switch') {
@@ -150,16 +146,18 @@
       $('#gateB').closest('.operand').hidden = S.gate === 'NOT';
       fillGateTables();
     }
-    if (st === 'half') { $('#draw-half').innerHTML = d ? D.halfGates() : D.halfModule(); if (animate) swapAnim($('#draw-half')); }
-    if (st === 'full') { $('#draw-full').innerHTML = d ? D.fullGates(d) : D.fullModule(); if (animate) swapAnim($('#draw-full')); }
+    const swap = (el, html) => animate ? window.morphSwap(el, () => { el.innerHTML = html; }, { dir: animate }) : (el.innerHTML = html);
+    if (st === 'half') swap($('#draw-half'), d ? D.halfGates() : D.halfModule());
+    if (st === 'full') swap($('#draw-full'), d ? D.fullGates(d) : D.fullModule());
     if (st === 'ripple') {
-      $('#draw-ripple').innerHTML = d ? `<div class="detail scrollx" id="rippleScroll">${D.rippleGates()}</div>` : D.rippleChain();
+      const html = d ? `<div class="detail scrollx" id="rippleScroll">${D.rippleGates()}</div>` : D.rippleChain();
+      const after = () => { const sc0 = $('#rippleScroll'); if (sc0) window.WIRES.schematic(sc0, { onClose: () => setDepth(0) }); };
+      if (animate) window.morphSwap($('#draw-ripple'), () => { $('#draw-ripple').innerHTML = html; after(); }, { dir: animate }); else { $('#draw-ripple').innerHTML = html; after(); }
       $$('#chain .fa').forEach(fa => {
         const pick = () => setZoom(+fa.dataset.bit);
         fa.addEventListener('click', pick); fa.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
       });
       const sc = $('#rippleScroll'); if (sc) sc.scrollLeft = sc.scrollWidth;      // bit 0 / carry-in side first on phones
-      if (animate) swapAnim($('#draw-ripple'));
       $('#draw-zoom').innerHTML = D.zoomFA(S.zoom);
     }
     updateModbar();
@@ -174,7 +172,7 @@
       const layers = { stage: $('#lvstage'), circuit: $('#lv-circuit'), gate: $('#lv-gate'), module: $('#lv-module') };
       window.LEVELS.go(layers, od, nd, showLevel);
       updateModbar(); render();
-    } else { drawStage(st, true); render(); }
+    } else { drawStage(st, nd > od ? 'expand' : 'collapse'); render(); }
   }
   function updateModbar() {
     const st = S.stage; if (!(st in S.depth)) return;

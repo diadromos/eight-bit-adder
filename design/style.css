@@ -68,6 +68,10 @@ h2{font-size:15px;font-weight:800;margin:0 0 8px;color:var(--muted);text-transfo
 .bit:active{transform:translateY(2px) scale(.96);box-shadow:inset 0 -1px 0 rgba(0,0,0,.35)}
 .bit:focus-visible{outline:none;box-shadow:0 0 0 3px var(--ring)}
 .bits.labeled{padding-bottom:14px}
+/* a lone toggle (Cin, gate inputs): fixed 52px coin, left-aligned */
+.operand.single{grid-template-columns:auto;justify-items:start}
+.operand.single .bits{justify-content:flex-start}
+.operand.single .bit{flex:0 0 52px;width:52px;max-width:52px}
 
 /* ---------- buttons, slider, toggle (from mobile.css) ---------- */
 .btn{font:700 15px/1 var(--font);min-height:var(--tap);padding:0 18px;border:0;border-radius:var(--r);
@@ -104,7 +108,7 @@ input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;bac
 .flag.on::before{background:var(--wire-1);box-shadow:0 0 8px var(--glow-1)}
 
 /* ---------- full-adder cards + chain ---------- */
-.chain{display:flex;flex-direction:column;gap:0;position:relative}
+.chain{display:flex;flex-direction:column;gap:0;position:relative;margin-bottom:12px}
 .fa{display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:10px;background:var(--card2);border-radius:18px;
   padding:8px 12px 8px 8px;min-height:56px;position:relative;transition:box-shadow var(--t),background var(--t)}
 .fa .idx{width:36px;height:36px;border-radius:12px;background:var(--inset);display:grid;place-items:center;font:800 13px var(--mono);color:var(--muted)}
@@ -152,6 +156,7 @@ footer{margin:16px 0 0;padding:14px;border-radius:18px;background:var(--card);co
   .bit::after{inset:-2px -2px}                           /* 44x52 hit area (gaps are 3px) */
   .panel .operand>.nums{grid-column:1/-1}                /* neutralises app.css .operand .nums{grid-column:2} */
   .panel .operand.single .bit{flex:0 0 52px;width:52px;max-width:52px}
+  .panel .operand.single{grid-template-columns:auto}
   /* gate-level 8-bit view (Ken's body.wide): stack, controls in a row of three on top */
   body.wide .top{grid-template-columns:minmax(0,1fr)}
   body.wide .side{display:grid;grid-template-columns:var(--side-w) minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:stretch}
@@ -293,3 +298,132 @@ button.switch-btn:focus-visible{outline:none;box-shadow:0 0 0 3px var(--ring)}
   .part .lever{transition:none}
   .fa.pulse{animation:none}
 }
+
+/* =====================================================================================
+   Review 2 additions (see CHANGES-2.md)
+   ===================================================================================== */
+
+/* ---------- unknown / not yet computed (Slow + Step). Distinct from 0 (solid slate) and 1 (amber):
+   a faint DOTTED line, no glow. Ken's existing .x class is accepted as an alias. ---------- */
+.wire.unknown,.carry.unknown,.wire.x,.carry.x{stroke:var(--wire-0);stroke-dasharray:1.5 6.5;opacity:.5;filter:none;animation:none}
+.gate.unknown,.gate.x{color:var(--wire-0);opacity:.42;filter:none}
+.gate.unknown .body,.gate.x .body{fill:var(--inset)}
+.gate.unknown .lead,.gate.x .lead{stroke:var(--wire-0);stroke-dasharray:1.5 5}
+.pin.unknown,.pin.x{fill:var(--inset);stroke:var(--wire-0);stroke-dasharray:2 2.6;filter:none;opacity:.7}
+.part.unknown,.part.x{opacity:.45;filter:none}
+.lbl.unknown,.lbl.x,.val.unknown,.val.x,.clbl.unknown,.clbl.x{opacity:.5}
+.fa .dot.unknown,.fa .dot.x{background:transparent;box-shadow:none;outline:2px dotted var(--wire-0);outline-offset:-2px}
+.fa .s.unknown,.fa .co.unknown,.fa .s.x,.fa .co.x{opacity:.5;box-shadow:inset 0 0 0 1.5px var(--card2)}
+/* just settled this gate delay (optional, Slow/Step): a brief brighter stroke */
+.wire.fresh.on,.carry.fresh.on{stroke-width:4.5;filter:drop-shadow(0 0 6px var(--glow-1))}
+.wire.fresh:not(.on){stroke:#7c879b}
+
+/* ---------- groups: dashed boxes around the two half adders (SVG) ----------
+   <rect class="group" x y width height/> + optional tab: <rect class="group-tab" .../><text class="group-label">HALF ADDER 1</text>
+   or call WIRES.group(x,y,w,h,'Half adder 1') from design/wires.js. Add .on to tint it amber while its output is 1. */
+.group{fill:rgba(255,255,255,.015);stroke:var(--muted);stroke-width:1.4;stroke-dasharray:5 5;stroke-linecap:round;opacity:.6;rx:14px;ry:14px;transition:stroke var(--t),opacity var(--t)}
+.group.on{stroke:var(--wire-1);opacity:.5}
+.group-tab{fill:var(--inset);stroke:var(--muted);stroke-width:1.2;opacity:.85;rx:7px;ry:7px}
+.group-label{font:800 8.5px var(--font);fill:var(--muted);letter-spacing:.07em;text-transform:uppercase}
+.group-tab.on{stroke:var(--wire-1)} .group-label.on{fill:var(--wire-1)}
+
+/* ---------- wire crossings ----------
+   (a) gap: draw <path class="wire-gap" d="(crossing wire)"/> right before the crossing wire; it paints a
+       panel-coloured band so the wire underneath reads as passing BEHIND. Set --gap-bg if the panel isn't --inset.
+       (Ken's .halo under every wire is the same idea.) Junctions must keep a .jdot so they don't read as gaps.
+   (b) hop: WIRES.hop(...) in design/wires.js returns a path with a small semicircle bridge over each crossing. */
+.wire-gap{fill:none;stroke:var(--gap-bg,var(--inset));stroke-width:10;stroke-linecap:butt;stroke-linejoin:round}
+
+/* ---------- selected full-adder card <-> zoom panel ----------
+   Selected = theme GREEN (UI selection), never amber (amber means logic 1). Use .selected or aria-current="true";
+   Ken's current aria-expanded="true" on the zoomed card is also matched. */
+.fa.selected,.fa[aria-current=true],.chain .fa[aria-expanded=true]{background:#2c3836;outline:2px solid var(--accent);outline-offset:0}
+.fa.selected .idx,.fa[aria-current=true] .idx,.chain .fa[aria-expanded=true] .idx{background:var(--accent);color:var(--accent-ink)}
+.fa:focus-visible{outline:3px solid var(--ring);outline-offset:2px}
+.fa:hover:not(.selected):not([aria-current=true]):not([aria-expanded=true]){background:#353a46}
+/* phone: a small "in zoom" tag on the selected card (the zoom panel is further down the page) */
+.fa.selected::after,.fa[aria-current=true]::after,.chain .fa[aria-expanded=true]::after{content:"zoom \2193";position:absolute;top:-8px;right:14px;
+  height:16px;padding:0 7px;border-radius:var(--r);background:var(--accent);color:var(--accent-ink);font:800 9px/16px var(--font);letter-spacing:.04em;pointer-events:none}
+/* zoom panel: same green accent strip + ring, header pill "Bit 5" */
+#zoompanel,.zoom-panel{position:relative;box-shadow:var(--shadow),inset 0 0 0 2px rgba(127,212,168,.28)}
+#zoompanel::before,.zoom-panel::before{content:"";position:absolute;top:0;left:24px;right:24px;height:3px;border-radius:0 0 3px 3px;background:var(--accent)}
+.zoom-badge{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:var(--r);background:var(--accent);color:var(--accent-ink);
+  font:800 13px var(--font);letter-spacing:.02em;text-transform:none;vertical-align:middle}
+#zoompanel .zoompick,.zoom-panel .zoompick{color:var(--accent)}
+#zoompanel #zoom,.zoom-panel select{background:rgba(127,212,168,.16);color:var(--accent);box-shadow:inset 0 0 0 2px var(--ring);border-radius:var(--r);font-weight:800}
+@media (min-width:900px){
+  /* desktop: cards are columns; the tag becomes a notch under the card pointing at the zoom panel below */
+  .chain.row .fa.selected::after,.chain.row .fa[aria-current=true]::after,.chain.row .fa[aria-expanded=true]::after{content:"";top:auto;right:auto;
+    bottom:-11px;left:50%;width:0;height:0;padding:0;margin-left:-9px;border-radius:0;background:none;border:9px solid transparent;border-top-color:var(--accent);border-bottom:0}
+}
+
+/* ---------- 8-bit gate-level view: full-width schematic ----------
+   Markup (WIRES.schematic() builds it around Ken's existing svg; or write it directly):
+   <div class="schem">
+     <div class="schem-head"><h3 class="schem-title">8-bit adder <small>gate level</small></h3>
+       <div class="schem-map" aria-label="Jump to bit"><button data-bit="7">7</button>...<button data-bit="0">0</button></div>
+       <button class="btn schem-close" aria-label="Close gate view">Close</button></div>
+     <div class="schem-canvas"> <svg class="circ ripple-gates">...</svg> </div>
+     <div class="schem-legend">...</div>
+   </div> */
+.schem{background:var(--inset);border-radius:18px;margin:0 0 10px;overflow:hidden;box-shadow:inset 0 0 0 1px #2b2f38}
+.schem-head{display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;padding:6px 6px 6px 14px;border-bottom:1px solid #2b2f38;background:#21242b}
+.schem-title{margin:0;font:800 15px var(--font);color:var(--ink);letter-spacing:0;text-transform:none}
+.schem-title small{font-weight:700;font-size:12px;color:var(--muted);margin-left:6px}
+.schem-map{display:grid;grid-template-columns:repeat(4,26px);grid-auto-rows:20px;gap:3px 3px;margin-left:auto;padding:4px 6px;border-radius:10px;background:var(--inset)}
+.schem-map button{appearance:none;border:0;padding:0;border-radius:6px;background:var(--card2);color:var(--muted);font:800 10px var(--mono);cursor:pointer;position:relative;transition:background var(--t),color var(--t)}
+.schem-map button::after{content:"";position:absolute;inset:-6px -2px}            /* bigger hit area */
+.schem-map button.vis{background:#414857;color:var(--ink)}
+.schem-map button.on{box-shadow:inset 0 -3px 0 var(--wire-1)}                    /* sum bit is 1 */
+.schem-map button:hover,.schem-map button:focus-visible{outline:none;background:var(--accent);color:var(--accent-ink)}
+.schem-close{min-height:var(--tap);padding:0 16px 0 12px;display:inline-flex;align-items:center;gap:6px}
+.schem-close::before{content:"\00d7";font-size:20px;line-height:1;margin-top:-2px}
+.schem-canvas{overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;padding:12px 10px;scroll-behavior:smooth}
+.schem-canvas>svg{display:block;width:100%;height:auto;min-width:var(--schem-min,1080px)}
+.schem-legend{display:flex;flex-wrap:wrap;gap:6px 16px;padding:8px 14px 10px;border-top:1px solid #2b2f38;font:700 11px var(--font);color:var(--muted)}
+.schem-legend i{display:inline-block;width:22px;height:0;border-top:3px solid var(--wire-0);vertical-align:middle;margin-right:6px;border-radius:2px}
+.schem-legend i.l1{border-color:var(--wire-1);box-shadow:0 0 6px var(--glow-1)}
+.schem-legend i.lx{border-top-style:dotted;opacity:.6}
+.schem-legend i.lc{border-top-width:5px;border-color:var(--wire-1)}
+.schem-hint{font:700 11px var(--font);color:var(--muted)}
+@media (max-width:899px){
+  .schem-title{flex:1 1 100%}
+  .schem-hint{flex:1 1 auto}
+  .schem-canvas{mask-image:linear-gradient(90deg,transparent,#000 16px,#000 calc(100% - 16px),transparent)}
+  .schem-head{padding-left:12px}
+}
+@media (min-width:900px){
+  .schem-canvas>svg{min-width:0}
+  .schem-hint{display:none}
+}
+/* inside the schematic svg */
+.ripple-gates .cell-bg{fill:#22252d;stroke:#2c313b;stroke-width:1.5;rx:18px;ry:18px;transition:fill .3s,stroke .3s}
+.ripple-gates .cell-bg.flash{animation:cellflash .9s ease-out}
+@keyframes cellflash{0%{fill:#2c3836;stroke:var(--accent)}100%{fill:#22252d;stroke:#2c313b}}
+.ripple-gates .row-bg{fill:none}
+.ripple-gates .bitl{font:800 17px var(--font);fill:var(--ink);letter-spacing:.02em}
+/* the carry chain is the spine: thicker, brighter at 1, slightly lighter slate at 0 */
+.ripple-gates .carry{stroke-width:5}
+.ripple-gates .halo:has(+ .carry){stroke-width:11}
+.ripple-gates .carry:not(.on):not(.x):not(.unknown){stroke:#5e6678}
+.ripple-gates .carry.on{filter:drop-shadow(0 0 5px var(--glow-1))}
+
+/* ---------- FLIP morph helpers (design/transitions.js) ---------- */
+.morph-ghost{position:absolute;margin:0;pointer-events:none;z-index:50;transform-origin:0 0;will-change:transform,opacity}
+.morphing{overflow:clip!important;overflow-clip-margin:14px}   /* while its height animates, new content doesn't spill over the text below */
+
+@media (prefers-reduced-motion:reduce){
+  .schem-canvas{scroll-behavior:auto}
+  .ripple-gates .cell-bg.flash{animation:none;stroke:var(--accent)}
+  .wire.fresh.on,.carry.fresh.on{filter:none}
+}
+
+/* stage-1 XOR part is drawn at 548 units wide; bigger text so it stays legible when scaled to a phone */
+.detail svg:has(> .part-xor-relay){max-height:470px}   /* tall drawing: let it grow past the 320px detail cap */
+.part-xor-relay .lbl{font-size:16px}
+.part-xor-relay .group-label{font-size:12px}
+.part-xor-relay .group{stroke-width:1.8}
+
+/* ---------- junction dots + ground stubs (kit versions of Ken's app.css rules) ---------- */
+.jdot{fill:var(--wire-0);transition:fill var(--t)} .jdot.on{fill:var(--wire-1)} .jdot.x,.jdot.unknown{opacity:.5}
+.wire.gnd{stroke:var(--wire-0);filter:none}

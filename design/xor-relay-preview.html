@@ -1,0 +1,19 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="style.css">
+<style>body{padding:16px;max-width:none}.grid{display:grid;grid-template-columns:repeat(2,560px);gap:14px}.panel{margin:0}.panel svg{width:100%;height:auto;display:block}
+.cap{font:800 13px var(--font);color:var(--muted);margin:0 0 6px}</style>
+<h1>PARTS['xor-relay'] — stage-1 XOR from relays</h1>
+<div class="grid" id="g"></div>
+<script src="parts/parts.js"></script>
+<script>
+const g=document.getElementById('g');
+[[0,0],[1,0],[0,1],[1,1]].forEach(([A,B])=>{
+  const a1=A&B,o1=A|B,out=o1&(1-a1), v={one:1,A,B,a1,o1,out};
+  const p=document.createElement('div');p.className='panel';
+  p.innerHTML=`<div class="cap">A=${A}  B=${B}  →  lamp ${out?'on':'off'}</div>`+PARTS['xor-relay'];
+  g.appendChild(p);
+  p.querySelectorAll('[data-w]').forEach(e=>e.classList.toggle('on',v[e.dataset.w]===1));
+  p.querySelectorAll('[data-flow]').forEach(e=>e.classList.toggle('flow',v[e.dataset.w]===1&&out===1));
+  p.querySelectorAll('[data-energ]').forEach(e=>e.classList.toggle('energized',v[e.dataset.energ]===1));
+  p.querySelectorAll('[data-lamp]').forEach(e=>e.classList.toggle('on',v[e.dataset.lamp]===1));
+});
+</script>

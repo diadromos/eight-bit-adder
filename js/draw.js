@@ -1,6 +1,6 @@
 /* SVG drawing for every stage. Pure string builders; values are applied later by app.js render()
    through data attributes:
-     data-w="wire"        element lights (.on) when the wire is 1, dims (.x) while unknown
+     data-w="wire"        element lights (.on) when the wire is 1, gets .unknown (dotted) while not settled
      data-o / data-i      gate output wire / input wires (Henri's svg.gate, leads lit per input)
      data-v="wire"        text shows 0 / 1 / ? ; data-lbl="A" makes it "A=1"
      data-energ="wire"    relay coil energized ; data-lamp / data-sw for lamp and switch parts
@@ -18,6 +18,11 @@
     let s = root.GATES[k].replace('<svg ', `<svg x='${mirror ? 0 : x}' y='${mirror ? 0 : y}' data-o='${out}' data-i='${ins.join(',')}' `);
     return mirror ? `<g transform="translate(${x + 60} ${y}) scale(-1 1)">${s}</g>` : s;
   }
+  // wire crossings: Henri's WIRES.hop / hopV bridge the later-drawn wire over the one under it (design/wires.js).
+  // tail() drops the leading "M x y" so a hop can continue an existing path.
+  const tail = d => d.replace(/^M\s*[-\d.]+\s+[-\d.]+/, '');
+  const hopH = (x1, y, x2, xs) => root.WIRES.hop(x1, y, x2, xs);
+  const hopV = (x, y1, y2, ys) => root.WIRES.hopV(x, y1, y2, ys);
   const PART = (k, x, y, attrs) => root.PARTS[k].replace('<svg ', `<svg x='${x}' y='${y}' ${attrs || ''} `);
   const svg = (vb, body, cls) => `<svg class="circ${cls ? ' ' + cls : ''}" viewBox="${vb}" role="img">${body}</svg>`;
   /* gate icon for a module title (Henri's markup: svg.micon.gate) */
@@ -58,6 +63,7 @@
       PART('battery', 10, 20) + relay('relay-nc', 110, 20, 'A', 'A') + PART('lamp', 310, 20, "data-lamp='out'"));
     // XOR = (A OR B) AND NOT (A AND B): top row A,B in series drive the coil of a normally-closed relay;
     // A,B in parallel feed that NC contact, then the lamp.
+    if (root.PARTS['xor-relay']) return svg('0 0 548 516', root.PARTS['xor-relay'].replace('<svg ', "<svg x='0' y='0' "));
     return svg('0 0 520 410',
       W('M70 200 H90', 'one', '', 'out') + W('M90 40 V300', 'one') + J(90, 200, 'one') + J(90, 170, 'one') +
       W('M90 40 H110', 'one') + W('M170 40 H210', 'A') + W('M270 40 H290 V240 H354 V210', 'a1') +
@@ -79,7 +85,7 @@
       P(20, 32, 'A') + P(20, 48, 'B') + P(180, 40, 'out') + LV(8, 24, 'A', 'A') + LV(8, 66, 'B', 'B') + LV(190, 28, 'out', 'out', 'end') +
       L(100, 14, g, 'out', 'middle'), 'sym'); }
     return svg('0 0 340 150',
-      W('M24 22 H90', 'A') + W('M46 22 V92 H70', 'A') + J(46, 22, 'A') + W('M24 38 H90', 'B') + W('M34 38 V108 H70', 'B') + J(34, 38, 'B') +
+      W('M24 22 H90', 'A') + W('M46 22 V92 H70', 'A') + J(46, 22, 'A') + W(hopH(24, 38, 90, [46]), 'B') + W('M34 38 V108 H70', 'B') + J(34, 38, 'B') +
       W('M150 30 H220 V52 H240', 'o1') + W('M130 100 H150', 'a1') + W('M210 100 H225 V68 H240', 'n1') + W('M300 60 H316', 'out') +
       G('or', 90, 10, 'o1', ['A', 'B']) + G('and', 70, 80, 'a1', ['A', 'B']) + G('not', 150, 80, 'n1', ['a1']) + G('and', 240, 40, 'out', ['o1', 'n1']) +
       P(20, 22, 'A') + P(20, 38, 'B') + P(320, 60, 'out') + LV(6, 14, 'A', 'A') + LV(6, 54, 'B', 'B') + LV(334, 48, 'out', 'out', 'end') +
@@ -93,7 +99,7 @@
   /* ---------------- Stage 2: half adder (Henri's layout) ---------------- */
   function halfGates() {
     return svg('0 0 200 120',
-      W('M18 32 H70', 'A') + W('M44 32 V82 H70', 'A') + J(44, 32, 'A') + W('M18 48 H70', 'B') + W('M32 48 V98 H70', 'B') + J(32, 48, 'B') +
+      W('M18 32 H70', 'A') + W('M44 32 V82 H70', 'A') + J(44, 32, 'A') + W(hopH(18, 48, 70, [44]), 'B') + W('M32 48 V98 H70', 'B') + J(32, 48, 'B') +
       W('M130 40 H182', 'S') + W('M130 90 H182', 'C') + G('xor', 70, 20, 'S', ['A', 'B']) + G('and', 70, 70, 'C', ['A', 'B']) +
       P(14, 32, 'A') + P(14, 48, 'B') + P(186, 40, 'S') + P(186, 90, 'C') +
       LV(4, 24, 'A', 'A') + LV(4, 64, 'B', 'B') + LV(198, 32, 'Sum', 'S', 'end') + LV(198, 82, 'Carry', 'C', 'end') +
@@ -105,15 +111,15 @@
      n = wire names {a,b,c,x1,a1,s,a2,co}; o = {labels, pins, vals, boxes:'dashed'|'solid'|'', names for pin labels} */
   function faBody(n, o) {
     o = o || {};
-    let s = W('M18 32 H60', n.a) + W('M42 32 V102 H60', n.a) + W('M18 48 H60', n.b) + W('M30 48 V118 H60', n.b) +
+    let s = W('M18 32 H60', n.a) + W('M42 32 V102 H60', n.a) + W(hopH(18, 48, 60, [42]), n.b) + W('M30 48 V118 H60', n.b) +
       W('M18 142 H148 V68 H160', n.c, o.carry ? 'carry' : '') + W('M148 128 H160', n.c, o.carry ? 'carry' : '') +
-      W('M120 40 H136 V52 H160', n.x1) + W('M136 52 V112 H160', n.x1) +
-      W('M120 110 H126 V155 H232 V128 H240', n.a1) + W('M220 120 H230 V112 H240', n.a2) +
+      W('M120 40 H136 V52 H160', n.x1) + W('M136 52 V112' + tail(hopH(136, 112, 160, [148])), n.x1) +
+      W('M120 110 H126' + tail(hopV(126, 110, 155, [142])) + ' H232 V128 H240', n.a1) + W('M220 120 H230 V112 H240', n.a2) +
       W('M220 60 H312', n.s) + W('M300 120 H312', n.co, o.carry ? 'carry' : '') +
       J(42, 32, n.a) + J(30, 48, n.b) + J(148, 128, n.c) + J(136, 52, n.x1) +
       G('xor', 60, 20, n.x1, [n.a, n.b]) + G('and', 60, 90, n.a1, [n.a, n.b]) + G('xor', 160, 40, n.s, [n.x1, n.c]) +
       G('and', 160, 100, n.a2, [n.x1, n.c]) + G('or', 240, 100, n.co, [n.a2, n.a1]);
-    if (o.boxes === 'dashed') s = `<rect class="habox" x="52" y="22" width="76" height="118" rx="14"/><rect class="habox" x="152" y="40" width="76" height="108" rx="14"/>` + s;
+    if (o.boxes === 'dashed') s = root.WIRES.group(52, -4, 76, 144, 'Half 1') + root.WIRES.group(152, 14, 76, 136, 'Half 2') + s;
     if (o.boxes === 'solid') s += `<rect class="hablock" data-w="${n.x1}" x="64" y="14" width="52" height="122" rx="12"/><text class="hbl" x="90" y="72" text-anchor="middle">Half</text><text class="hbl" x="90" y="86" text-anchor="middle">adder</text>` +
       `<rect class="hablock" data-w="${n.s}" x="164" y="34" width="52" height="112" rx="12"/><text class="hbl" x="190" y="86" text-anchor="middle">Half</text><text class="hbl" x="190" y="100" text-anchor="middle">adder</text>`;
     if (o.pins) s += P(14, 32, n.a) + P(14, 48, n.b) + P(14, 142, n.c) + P(316, 60, n.s) + P(316, 120, n.co);
@@ -126,10 +132,10 @@
   }
   const FA_FULL = { a: 'A', b: 'B', c: 'Cin', x1: 'x1', a1: 'a1', s: 'S', a2: 'a2', co: 'Cout' };
   const faNames = i => ({ a: 'a' + i, b: 'b' + i, c: 'c' + i, x1: 'f' + i + '.x1', a1: 'f' + i + '.a1', s: 's' + i, a2: 'f' + i + '.a2', co: 'c' + (i + 1) });
-  function fullGates(depth) { return svg('0 0 340 165', faBody(FA_FULL, { pins: 1, labels: 1, vals: 1, boxes: depth === 1 ? 'solid' : 'dashed' })); }
+  function fullGates(depth) { return svg(depth === 1 ? '0 0 340 165' : '0 -14 340 179', faBody(FA_FULL, { pins: 1, labels: 1, vals: 1, boxes: depth === 1 ? 'solid' : 'dashed' })); }
   const fullModule = () => moduleBox('Full adder', [['A', 'A'], ['B', 'B'], ['Cin', 'Cin']], [['S', 'Sum'], ['Cout', 'Cout']], 'or');
   function zoomFA(i) {
-    return svg('0 0 340 165', faBody(faNames(i), { pins: 1, labels: 1, vals: 1, boxes: 'dashed', carry: 1,
+    return svg('0 -14 340 179', faBody(faNames(i), { pins: 1, labels: 1, vals: 1, boxes: 'dashed', carry: 1,
       names: { a: 'A' + i, b: 'B' + i, c: 'c' + i, s: 'S' + i, co: 'c' + (i + 1) } }));
   }
 
@@ -146,13 +152,13 @@
       s += W(`M${x + 344} ${y - 18} V${y + 48} H${x + 322}`, 'b' + i) + P(x + 344, y - 22, 'b' + i) + LV(x + 350, y - 26, 'B' + i, 'b' + i);
       s += W(`M${x + 28} ${y + 60} H${x + 18} V${y + 190}`, 's' + i) + P(x + 18, y + 194, 's' + i) + LV(x + 18, y + 212, 'S' + i, 's' + i, 'middle');
       s += `<text class="bitl" x="${x + 170}" y="${y - 40}" text-anchor="middle">bit ${i}</text>`;
-      if (i !== 3 && i !== 7) s += W(`M${x + 28} ${y + 120} H${x - 10} V${y + 142} H${x - 38}`, 'c' + (i + 1), 'carry');
+      if (i !== 3 && i !== 7) s += W(hopH(x + 28, y + 120, x - 10, [x + 18]) + ` V${y + 142} H${x - 38}`, 'c' + (i + 1), 'carry');
     }
     // carry-in to bit 0, the c4 elbow from bit 3 up to bit 4, carry-out and overflow at bit 7
     s += W(`M1460 ${R + 142} H1402`, 'c0', 'carry') + P(1464, R + 142, 'c0') + LV(1470, R + 130, 'Cin', 'c0', 'end');
-    s += W(`M28 ${R + 120} H-20 V${R - 82} H1450 V142 H1402`, 'c4', 'carry');
+    s += W(hopH(28, R + 120, -20, [18]) + ` V${R - 82} H1450 V142 H1402`, 'c4', 'carry');
     s += W('M350 142 V228 H-50 V178 H-60', 'c7', 'carry') + J(350, 142, 'c7');
-    s += W('M28 120 H-100', 'c8', 'carry') + W('M-40 120 V162 H-60', 'c8', 'carry') + J(-40, 120, 'c8') + P(-104, 120, 'c8') + LV(-104, 106, 'Cout', 'c8', 'middle');
+    s += W(hopH(28, 120, -100, [18]), 'c8', 'carry') + W('M-40 120 V162 H-60', 'c8', 'carry') + J(-40, 120, 'c8') + P(-104, 120, 'c8') + LV(-104, 106, 'Cout', 'c8', 'middle');
     s += G('xor', -120, 150, 'v', ['c8', 'c7'], true) + W('M-120 170 H-140', 'v') + P(-144, 170, 'v') + LV(-144, 196, 'Overflow', 'v', 'start');
     return svg('-175 -60 1655 625', s, 'ripple-gates');
   }

@@ -1,27 +1,18 @@
 /* App glue for the 8-bit adder. Henri's design/style.css is the look; this file only adds layout
    for this page's DOM and the states his kit doesn't cover (unknown wires, halos, tables, inputs). */
 [hidden]{display:none!important}
+/* while transitions.js ghosts fly to off-screen gate cells (phone), don't let them widen the page */
+body:has(.morph-ghost){overflow-x:clip}
 h2 .muted{text-transform:none;letter-spacing:0}
 
 /* ---- layout ---- */
 .side,.main{min-width:0}
 .main>.panel,.side>.panel{min-width:0}
-@media (min-width:900px){
-  /* wider left column so the 8 bit coins stay >= 40px wide */
-  .top{grid-template-columns:minmax(410px,440px) minmax(0,1fr)}
-  /* 8-bit gate view: controls in a row on top, schematic full width */
-  body.wide .top{grid-template-columns:minmax(0,1fr)}
-  body.wide .side{display:grid;grid-template-columns:minmax(410px,440px) minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
-}
 
 /* ---- inputs ---- */
 #inputs{padding:12px 10px}
 .pair{display:flex;gap:18px;flex-wrap:wrap;margin-top:8px}
-.operand.single{grid-template-columns:auto!important;justify-items:start}
-.operand.single .bits{justify-content:flex-start}
-.operand.single .bit{flex:0 0 52px;min-width:52px}
 .nums{display:flex;gap:10px;flex-wrap:wrap;margin-top:2px}
-@media (min-width:900px){.operand .nums{grid-column:2}}
 .nums label{display:inline-flex;align-items:center;gap:6px;font:700 13px var(--font);color:var(--muted)}
 .nums input{font:700 16px var(--mono);width:76px;min-height:var(--tap);padding:0 10px;text-align:center;color:var(--ink);
   background:var(--inset);border:0;border-radius:16px;box-shadow:inset 0 2px 4px rgba(0,0,0,.45)}
@@ -35,7 +26,7 @@ h2 .muted{text-transform:none;letter-spacing:0}
 #sumBin{font:800 26px/1.1 var(--mono);letter-spacing:.06em;display:flex;gap:12px}
 #sumBin b{color:var(--wire-1)} #sumBin i{font-style:normal;color:var(--wire-0)} #sumBin i.u{color:var(--muted);opacity:.6}
 .signed{font-size:14px}
-.light.x{opacity:.55}
+.light.unknown{opacity:.55}
 .ovnote{margin-top:4px;color:var(--muted);font-size:13px;line-height:1.45}
 .ovnote summary{cursor:pointer;font-weight:800;min-height:32px;display:flex;align-items:center}
 .ovnote p{margin:4px 0 0}
@@ -57,28 +48,13 @@ svg.circ.sym{max-width:440px}
 #draw-half svg.circ{max-width:520px}
 #draw-full svg.circ,#draw-zoom svg.circ{max-width:600px}
 .halo{fill:none;stroke:var(--inset);stroke-width:8;stroke-linecap:round;stroke-linejoin:round}
-.wire.gnd{stroke:var(--wire-0)}
-.jdot{fill:var(--wire-0);transition:fill var(--t)} .jdot.on{fill:var(--wire-1)}
 .val{font:800 10px var(--mono);fill:var(--muted)} .val.on{fill:var(--wire-1)}
 .bitl{font:800 13px var(--font);fill:var(--muted)}
-.habox{fill:none;stroke:var(--muted);stroke-width:1.2;stroke-dasharray:4 5;opacity:.55}
-.hal{font:700 8px var(--font);fill:var(--muted);opacity:.8}
 .hablock{fill:var(--card2);stroke:var(--wire-0);stroke-width:2}
 .hbl{font:800 10px var(--font);fill:var(--ink)}
-/* unknown (not settled yet) in Slow / Step mode */
-.wire.x,.carry.x{stroke-dasharray:1 7;opacity:.55;filter:none}
-.gate.x{opacity:.4;filter:none}
-.pin.x,.jdot.x,.lbl.x,.val.x{opacity:.5}
-.dot.x,.s.x,.co.x,.clbl.x{opacity:.45}
-/* just settled this gate delay */
-.wire.fresh.on{stroke-width:4.5;filter:drop-shadow(0 0 6px var(--glow-1))}
-.wire.fresh:not(.on){stroke:#7c879b}
 .swhit{cursor:pointer;outline:none}
 .swhit:focus-visible rect{stroke:var(--ring);stroke-width:3}
 .ripple-gates .wire{stroke-width:3.4}
-.scrollx{overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
-.scrollx svg.ripple-gates{min-width:1100px}
-@media (min-width:900px){.scrollx svg.ripple-gates{min-width:0}}
 .fa{cursor:pointer}
 
 /* stage 1: three stacked levels (grid stacking keeps the height steady) */
