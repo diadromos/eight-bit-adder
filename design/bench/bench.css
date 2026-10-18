@@ -1,0 +1,220 @@
+/* design/bench/bench.css — the early-20th-century workbench theme.
+   Load AFTER design/style.css. Art: bench-art.js (window.BENCH_ART), helpers: bench.js (window.BENCH).
+   Signal colours stay the kit's: slate = 0, amber = 1 (var(--wire-0) / var(--wire-1) / var(--glow-1)).
+   Every animated property has a reduced-motion version at the bottom. */
+@property --heat{syntax:'<number>';inherits:true;initial-value:0}
+:root{
+  --bn-amber:var(--wire-1,#ffc247); --bn-glow:var(--glow-1,rgba(255,194,71,.65)); --bn-slate:var(--wire-0,#4f5767);
+  --bn-ink:#2a1708; --bn-paper:#f1e6cc; --bn-paper-ink:#3b2a17; --bn-engrave:#3b2706;
+  --bn-wood-1:#a46a34; --bn-wood-2:#8c5627; --bn-wood-3:#6e4019;
+  --bn-heat-ms:700ms; --bn-swing-ms:360ms;
+  --bn-serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+}
+.bn{overflow:visible;display:block}
+.bn text{user-select:none}
+
+/* ===== bench scene ===== */
+.bn-scene{position:relative;border-radius:22px;overflow:hidden;isolation:isolate;min-height:320px;
+  background:
+    radial-gradient(120% 90% at 50% 40%,transparent 55%,rgba(0,0,0,.45)),
+    repeating-linear-gradient(0deg,transparent 0 139px,rgba(40,20,6,.55) 139px 141px,rgba(200,140,80,.25) 141px 142px),
+    repeating-linear-gradient(90deg,rgba(255,255,255,0) 0 3px,rgba(90,50,16,.06) 3px 4px),
+    linear-gradient(180deg,var(--bn-wood-1),var(--bn-wood-2) 40%,#9a6230 70%,var(--bn-wood-3));
+  box-shadow:inset 0 2px 0 rgba(255,220,170,.25),inset 0 -3px 0 rgba(0,0,0,.35),0 8px 24px rgba(0,0,0,.45)}
+.bn-scene>.bn-benchtop{position:absolute;inset:0;z-index:-1}            /* SVG wood grain (BENCH.benchTop()) over the CSS fallback */
+.bn-scene .bn-part{position:absolute;cursor:grab;touch-action:none;filter:drop-shadow(0 6px 6px rgba(25,12,3,.45))}
+.bn-scene .bn-part:active,.bn-scene .bn-part.dragging{cursor:grabbing;filter:drop-shadow(0 14px 12px rgba(25,12,3,.5));transform:translateY(-3px) rotate(-1deg)}
+.bn-scene .bn-part:focus-visible{outline:3px solid var(--ring,rgba(127,212,168,.6));outline-offset:4px;border-radius:12px}
+.bn-scene .bn-wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.bn-scene .bn-drop{position:absolute;border:2px dashed rgba(255,236,200,.45);border-radius:14px;background:rgba(255,236,200,.06)}
+.bn-scene .bn-drop.hot{border-color:var(--bn-amber);background:rgba(255,194,71,.10)}
+
+/* parts tray (drawer) */
+.bn-trayslot{display:grid;place-items:center}
+.bn-tray-wrap{position:relative}
+
+/* ===== carbon lamp: --heat 0..1 ===== */
+.bn-lamp{--heat:0;transition:--heat var(--bn-heat-ms) cubic-bezier(.35,0,.25,1)}
+.bn-lamp.on{--heat:1}
+.bn-lamp .halo{opacity:var(--heat);transform-box:fill-box;transform-origin:center;transform:scale(calc(.6 + var(--heat)*.4))}
+.bn-lamp .warm{opacity:calc(var(--heat)*.26)}
+.bn-lamp .fil-hot{opacity:min(1,calc(var(--heat)*2.4))}
+.bn-lamp .fil-white{opacity:max(0,calc((var(--heat) - .55)*2.3))}
+.bn-lamp .filament{filter:drop-shadow(0 0 calc(var(--heat)*3px) rgba(255,170,60,calc(var(--heat))))}
+
+/* ===== knife switch ===== */
+.bn-knife .blade{transform:rotate(-38deg);transition:transform var(--bn-swing-ms) cubic-bezier(.55,0,.8,.3)}
+.bn-knife.closed .blade,.bn-knife[aria-checked=true] .blade{transform:none}
+.bn-knife.closed:not(.on) .blade rect:first-child{filter:none}
+.bn-knife.on .blade>rect:first-child{filter:drop-shadow(0 0 3px var(--bn-glow))}
+
+/* ===== sparks (hidden until BENCH.spark plays one) ===== */
+.bn-spark{opacity:0;pointer-events:none}
+
+/* ===== nail electromagnet + iron piece ===== */
+.bn-magnet .iron{transition:transform 240ms cubic-bezier(.3,1.7,.55,1)}
+.bn-magnet.on .iron{transform:translateX(-12px)}
+.bn-magnet .field{opacity:0;transition:opacity 200ms}
+.bn-magnet.on .field{opacity:1}
+.bn-magnet.on .coil{filter:drop-shadow(0 0 4px var(--bn-glow))}
+
+/* ===== armature relay ===== */
+.bn-relay .armature{transition:transform 150ms cubic-bezier(.3,1.6,.5,1)}
+.bn-relay.energized .armature{transform:rotate(-6.5deg)}
+.bn-relay .spring{transform-box:view-box;transform-origin:118px 80px;transition:transform 150ms cubic-bezier(.3,1.6,.5,1)}
+.bn-relay.energized .spring{transform:scaleY(1.05)}
+.bn-relay.energized .coil{filter:drop-shadow(0 0 4px var(--bn-glow))}
+
+/* ===== binding screws / terminals ===== */
+.bn-screw .slot{transition:transform 450ms cubic-bezier(.2,.8,.2,1)}
+.bn-screw.tight .slot{transform:rotate(270deg)}
+.bn-screw .pin-ring{stroke:transparent;stroke-width:1.6;transition:stroke var(--t,120ms),filter var(--t,120ms)}
+.bn-screw.on .pin-ring{stroke:var(--bn-amber);filter:drop-shadow(0 0 3px var(--bn-glow))}
+.bn-screw.unknown .pin-ring,.bn-screw.x .pin-ring{stroke:var(--bn-slate);stroke-dasharray:1.5 2.5;opacity:.8}
+.bn-screw.hover .pin-ring,.bn-screw.target .pin-ring{stroke:#fff4d0;stroke-dasharray:2 2}
+
+/* ===== cloth-covered wire (BENCH.wire) =====
+   layers: .cw-out (dark edge) .cw-base (cloth colour) .cw-b1/.cw-b2 (braid dashes) .cw-sheen, then signal overlays
+   .cw-sig (amber glow when .on) and .cw-flow (moving amber current when .on.flow). */
+.cw{--cw:#6b3b22;--cw-hi:#b07a52;--cw-lo:#3d1e0e}
+.cw.red{--cw:#7d2a22;--cw-hi:#c46a58;--cw-lo:#45130e}
+.cw.green{--cw:#3f5a34;--cw-hi:#86a072;--cw-lo:#1f3019}
+.cw.black{--cw:#2b2622;--cw-hi:#6a615a;--cw-lo:#120f0d}
+.cw.cream{--cw:#b9a37c;--cw-hi:#efe0c0;--cw-lo:#6f5c3c}
+.cw path{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.cw .cw-out{stroke:#160c05;stroke-width:6.4;opacity:.9}
+.cw .cw-base{stroke:var(--cw);stroke-width:4.8}
+.cw .cw-b1{stroke:var(--cw-hi);stroke-width:4;stroke-dasharray:1.3 2.1;stroke-linecap:butt;opacity:.7}
+.cw .cw-b2{stroke:var(--cw-lo);stroke-width:4;stroke-dasharray:1.3 2.1;stroke-dashoffset:1.7;stroke-linecap:butt;opacity:.65}
+.cw .cw-sheen{stroke:#fff;stroke-width:1;opacity:.14}
+.cw .cw-sig{stroke:var(--bn-amber);stroke-width:2.2;opacity:0;transition:opacity var(--t,120ms),filter var(--t,120ms)}
+.cw .cw-flow{stroke:#fff3c8;stroke-width:1.6;stroke-dasharray:3 11;opacity:0}
+.cw.on .cw-sig{opacity:.9;filter:drop-shadow(0 0 4px var(--bn-glow))}
+.cw.on.flow .cw-flow{opacity:.95;animation:cwflow 600ms linear infinite}
+.cw.unknown .cw-sig,.cw.x .cw-sig{opacity:.75;stroke:#c9c0b0;stroke-width:1.4;stroke-dasharray:1 5}
+.cw .cw-tip{fill:url(#bn-copper);stroke:#4f200c;stroke-width:.5}
+@keyframes cwflow{to{stroke-dashoffset:-28}}
+
+/* ===== steps 6-9: bench modules (wooden / bakelite boxes with brass terminals) =====
+   same markup as .module (style.css): .module.bench > .mpins.in > .mpin > span, .mtitle, .mpins.out; add .bakelite for the dark box */
+.module.bench{border-radius:10px;padding:6px 0;color:#fbeed3;
+  background:
+    linear-gradient(180deg,rgba(255,225,180,.28),rgba(255,225,180,0) 10px),
+    repeating-linear-gradient(176deg,rgba(70,35,10,0) 0 7px,rgba(70,35,10,.16) 7px 8px,rgba(255,210,150,.06) 8px 11px),
+    linear-gradient(180deg,#b27a42,#8c5627 55%,#734318);
+  box-shadow:inset 0 0 0 1px rgba(40,20,5,.6),inset 0 2px 0 rgba(255,225,180,.35),inset 0 -5px 0 rgba(40,18,4,.55),0 8px 0 #4a2a0e,0 12px 18px rgba(20,10,2,.55)}
+.module.bench.bakelite{color:#f3e2c4;
+  background:radial-gradient(130% 120% at 30% 15%,#7a4423,#3d1e0e 55%,#1c0c04);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.6),inset 0 2px 0 rgba(255,200,150,.25),inset 0 -5px 0 rgba(0,0,0,.5),0 8px 0 #120700,0 12px 18px rgba(0,0,0,.55)}
+/* title on an engraved brass plate with 2 screws */
+.module.bench>.mtitle{align-self:center;white-space:nowrap;margin:8px 4px;padding:6px 18px;border-radius:5px;font:700 14px/1.1 var(--bn-serif);letter-spacing:.06em;text-transform:uppercase;
+  color:var(--bn-engrave);text-shadow:0 1px 0 rgba(255,245,210,.65);
+  background:
+    radial-gradient(circle at 8px 50%,#5b3f0e 0 2px,#f5dc96 2.5px 3.6px,transparent 4px),
+    radial-gradient(circle at calc(100% - 8px) 50%,#5b3f0e 0 2px,#f5dc96 2.5px 3.6px,transparent 4px),
+    linear-gradient(180deg,#f8e3a0,#d8b35a 45%,#b48a35 55%,#e9c66b);
+  box-shadow:inset 0 0 0 1px #6e4f16,0 1px 2px rgba(0,0,0,.45)}
+.module.bench .micon{color:var(--bn-engrave)}
+.module.bench .mpins.in{margin-left:-14px} .module.bench .mpins.out{margin-right:-14px}
+/* terminal = a brass screw on the box edge; the lead (::before) is cloth wire */
+.module.bench .mpin{height:26px;font:700 11px var(--bn-serif);letter-spacing:.04em;color:#f6e3bd}
+.module.bench .mpin::before{width:16px;height:5px;border-radius:3px;
+  background:repeating-linear-gradient(90deg,#6b3b22 0 2px,#3d1e0e 2px 3px,#b07a52 3px 4px);box-shadow:0 0 0 1px #160c05}
+.module.bench .mpin::after{width:14px;height:14px;left:11px;
+  background:radial-gradient(circle at 38% 32%,#fff6cf,#e6c064 35%,#9c7224 75%,#5b3f0e);
+  box-shadow:0 0 0 2px #c79a3f,0 0 0 3px #5a3f10,0 2px 3px rgba(0,0,0,.5)}
+.module.bench .mpins.out .mpin::after{left:auto;right:11px}
+.module.bench .mpin>span{padding-left:12px} .module.bench .mpins.out .mpin>span{padding:0 12px 0 0}
+.module.bench .mpin.on{color:#ffe1a0}
+.module.bench .mpin.on::before{background:var(--bn-amber);box-shadow:0 0 0 1px #160c05,0 0 6px var(--bn-glow)}
+.module.bench .mpin.on::after{box-shadow:0 0 0 2px var(--bn-amber),0 0 0 3px #5a3f10,0 0 10px var(--bn-glow)}
+.module.bench .mpin.x::after,.module.bench .mpin.unknown::after{box-shadow:0 0 0 2px #c79a3f,0 0 0 3px #5a3f10,0 0 0 5px rgba(240,230,210,.35)}
+.module.bench.on{box-shadow:inset 0 0 0 1px rgba(40,20,5,.6),inset 0 2px 0 rgba(255,225,180,.35),inset 0 -5px 0 rgba(40,18,4,.55),0 8px 0 #4a2a0e,0 12px 18px rgba(20,10,2,.55),0 0 0 2px rgba(255,194,71,.55)}
+.module.bench .mexp{background:rgba(30,14,4,.35);color:#f6e3bd;border-radius:6px}
+.module.bench .minner{background:rgba(20,10,3,.45);border-radius:6px;box-shadow:inset 0 2px 6px rgba(0,0,0,.5)}
+
+/* ===== step ladder: brass plates ===== */
+.ladder{list-style:none;margin:0;padding:10px;display:flex;flex-direction:column;gap:8px;border-radius:12px;
+  background:linear-gradient(180deg,#5f3714,#3d2009);box-shadow:inset 0 0 0 1px #2a1505,inset 0 2px 0 rgba(255,220,170,.18)}
+.ladder .rung{position:relative;display:flex;align-items:center;gap:10px;min-height:44px;padding:6px 26px 6px 10px;border-radius:5px;cursor:pointer;
+  font:700 14px/1.15 var(--bn-serif);color:var(--bn-engrave);text-shadow:0 1px 0 rgba(255,245,210,.6);
+  background:
+    radial-gradient(circle at 9px 9px,#5b3f0e 0 1.6px,#f5dc96 2px 2.8px,transparent 3.2px),
+    radial-gradient(circle at calc(100% - 9px) calc(100% - 9px),#5b3f0e 0 1.6px,#f5dc96 2px 2.8px,transparent 3.2px),
+    linear-gradient(180deg,#f2d88f,#d2a94e 48%,#b0852f 54%,#e2bf68);
+  box-shadow:inset 0 0 0 1px #6e4f16,0 2px 0 #2a1505,0 3px 6px rgba(0,0,0,.45);transition:transform 120ms,filter 120ms}
+.ladder .rung .n{flex:0 0 28px;height:28px;border-radius:50%;display:grid;place-items:center;font:800 13px var(--bn-serif);color:#f6e3bd;text-shadow:none;
+  background:radial-gradient(circle at 38% 32%,#6b4a1a,#3b2706);box-shadow:inset 0 1px 2px rgba(0,0,0,.6),0 1px 0 rgba(255,240,200,.5)}
+.ladder .rung.locked{filter:saturate(.25) brightness(.62);cursor:default}
+.ladder .rung.done{background:
+    radial-gradient(circle at 9px 9px,#5b3f0e 0 1.6px,#f5dc96 2px 2.8px,transparent 3.2px),
+    radial-gradient(circle at calc(100% - 9px) calc(100% - 9px),#5b3f0e 0 1.6px,#f5dc96 2px 2.8px,transparent 3.2px),
+    linear-gradient(180deg,#c9b27a,#a88f55 50%,#8e7744);}
+.ladder .rung.done::after{content:"\2713";position:absolute;right:10px;top:50%;translate:0 -50%;font:900 15px var(--font,system-ui);color:#2f4d22;text-shadow:0 1px 0 rgba(255,255,255,.4)}
+.ladder .rung.current,.ladder .rung[aria-current=step]{box-shadow:inset 0 0 0 1px #6e4f16,0 2px 0 #2a1505,0 0 0 2px var(--bn-amber),0 0 14px var(--bn-glow)}
+.ladder .rung.current::after,.ladder .rung[aria-current=step]::after{content:"";position:absolute;right:9px;top:50%;width:10px;height:10px;margin-top:-5px;border-radius:50%;
+  background:radial-gradient(circle at 40% 35%,#fff7d6,#ffc247 50%,#c27a12);box-shadow:0 0 8px var(--bn-glow)}
+.ladder .rung:not(.locked):hover{transform:translateX(2px)}
+.ladder .rung:focus-visible{outline:3px solid var(--ring,rgba(127,212,168,.6));outline-offset:2px}
+
+/* ===== goal card: a ruled index card pinned with a brass tack ===== */
+.goal-card{position:relative;padding:18px 18px 14px;border-radius:4px;color:var(--bn-paper-ink);font:500 15px/1.45 var(--bn-serif);rotate:-.6deg;
+  background:
+    linear-gradient(90deg,transparent 30px,rgba(196,74,60,.55) 30px 31px,transparent 31px),
+    repeating-linear-gradient(180deg,transparent 0 23px,rgba(70,110,160,.28) 23px 24px),
+    linear-gradient(180deg,#f7eed8,#efe2c3);
+  background-position:0 0,0 30px,0 0;
+  box-shadow:0 1px 0 #d8c7a0,0 6px 14px rgba(20,10,2,.5)}
+.goal-card::before{content:"";position:absolute;top:-6px;left:50%;width:16px;height:16px;margin-left:-8px;border-radius:50%;
+  background:radial-gradient(circle at 38% 32%,#fff6cf,#e6c064 35%,#9c7224 75%,#5b3f0e);box-shadow:0 3px 4px rgba(0,0,0,.45)}
+.goal-card h3{margin:0 0 4px 22px;font:800 13px var(--bn-serif);letter-spacing:.14em;text-transform:uppercase;color:#7a2b1e}
+.goal-card p{margin:0 0 6px 22px}
+.goal-card .checks{list-style:none;margin:4px 0 0 22px;padding:0}
+.goal-card .checks li{padding-left:24px;position:relative;min-height:24px}
+.goal-card .checks li::before{content:"";position:absolute;left:0;top:4px;width:14px;height:14px;border:1.6px solid #6a5a44;border-radius:2px}
+.goal-card .checks li.ok::before{border-color:#2f6a2a}
+.goal-card .checks li.ok::after{content:"\2713";position:absolute;left:1px;top:-3px;font:900 18px var(--bn-serif);color:#2f6a2a}
+.goal-card.met{box-shadow:0 1px 0 #d8c7a0,0 6px 14px rgba(20,10,2,.5),0 0 0 2px var(--bn-amber),0 0 18px var(--bn-glow)}
+
+/* ===== success burst (BENCH.burst(el)) ===== */
+.bn-burst{position:absolute;pointer-events:none;width:0;height:0;z-index:20}
+.bn-burst i{position:absolute;left:0;top:0;width:3px;height:16px;margin:-8px 0 0 -1.5px;border-radius:2px;
+  background:linear-gradient(#fffbe6,#ffc247);box-shadow:0 0 6px var(--bn-glow);transform-origin:50% 50%}
+.bn-burst b{position:absolute;left:0;top:0;width:8px;height:8px;margin:-4px;border-radius:50%;
+  background:radial-gradient(circle at 38% 32%,#fff6cf,#e6c064 40%,#9c7224)}
+.bn-burst .core{position:absolute;left:-40px;top:-40px;width:80px;height:80px;border-radius:50%;background:radial-gradient(circle,#fff 0,#ffe39a 25%,rgba(255,194,71,0) 70%)}
+
+/* ===== binary row: 8 carbon bulbs on a wooden strip with engraved place values ===== */
+.binrow{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;padding:8px 10px 10px;border-radius:10px;
+  background:
+    repeating-linear-gradient(178deg,rgba(70,35,10,0) 0 6px,rgba(70,35,10,.15) 6px 7px),
+    linear-gradient(180deg,#a46a34,#7f4b20);
+  box-shadow:inset 0 2px 0 rgba(255,225,180,.3),inset 0 -4px 0 rgba(40,18,4,.5),0 6px 12px rgba(20,10,2,.45)}
+.binrow .bb{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
+.binrow .bb .bn{width:100%;max-width:46px;height:auto}
+.binrow .pv{font:700 11px var(--bn-serif);color:#3b1f08;text-shadow:0 1px 0 rgba(255,220,170,.45);letter-spacing:.02em;
+  padding:1px 6px;border-radius:3px;background:rgba(60,28,6,.18);box-shadow:inset 0 1px 1px rgba(0,0,0,.35)}
+.binrow .bit-v{font:800 12px var(--mono,monospace);color:#f1dcb6}
+.binrow .bb.on .bit-v{color:var(--bn-amber);text-shadow:0 0 6px var(--bn-glow)}
+.binrow .nibgap{display:none}
+@media (max-width:420px){.binrow{gap:2px;padding:6px}.binrow .pv{font-size:9.5px;padding:1px 3px}}
+
+/* ===== reduced motion: instant state + brief highlight, no swing, overshoot, spark or flow =====
+   Applies with the OS setting, or when <html class="bn-reduce"> is set (an in-app "calm motion" toggle; BENCH.reduce() honours both). */
+.bn-flash{animation:bnflash 420ms ease-out}
+@keyframes bnflash{0%{filter:drop-shadow(0 0 0 rgba(255,244,208,0))}30%{filter:drop-shadow(0 0 7px rgba(255,244,208,.95))}100%{filter:drop-shadow(0 0 0 rgba(255,244,208,0))}}
+/* reduced: the highlight does not grow or move; it is on at once and fades */
+@keyframes bnflashrm{0%,55%{filter:drop-shadow(0 0 2px #fff4d0) drop-shadow(0 0 5px rgba(255,194,71,.95))}100%{filter:none}}
+.bn-reduce .bn-lamp,.bn-reduce .bn-knife .blade,.bn-reduce .bn-magnet .iron,.bn-reduce .bn-relay .armature,.bn-reduce .bn-relay .spring,.bn-reduce .bn-screw .slot{transition:none!important}
+.bn-reduce .bn-spark,.bn-reduce .bn-burst{display:none}
+.bn-reduce .cw.on.flow .cw-flow{animation:none;opacity:0}
+.bn-reduce .bn-flash{animation:bnflashrm 450ms linear}
+@media (prefers-reduced-motion:reduce){
+  .bn-lamp,.bn-knife .blade,.bn-magnet .iron,.bn-relay .armature,.bn-relay .spring,.bn-screw .slot{transition:none!important}
+  .bn-spark{display:none}
+  .cw.on.flow .cw-flow{animation:none;opacity:0}
+  .bn-scene .bn-part:active,.bn-scene .bn-part.dragging{transform:none}
+  .ladder .rung:not(.locked):hover{transform:none}
+  .bn-burst{display:none}
+  .bn-flash{animation:bnflashrm 450ms linear}
+}

@@ -1,5 +1,5 @@
 const puppeteer=require('puppeteer-core');const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-const B='http://127.0.0.1:8770/',O='/workspace/eight-bit-adder/shots/';
+const B='http://127.0.0.1:8770/classic.html',O='/workspace/eight-bit-adder/shots/';
 (async()=>{const b=await puppeteer.launch({executablePath:'/usr/bin/google-chrome',args:['--no-sandbox']});const errs=[];
 async function open(q,w,h=900){const p=await b.newPage();p.on('pageerror',e=>errs.push(e.message));await p.setViewport({width:w,height:h});
  await p.goto(B+q,{waitUntil:'networkidle0'});await p.waitForFunction('window.APP&&APP.ready');await sleep(300);return p;}

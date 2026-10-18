@@ -4,7 +4,32 @@ Every sum a computer has ever made, from the first to the last, was carried out 
 
 It is an interactive page that builds an 8-bit adder from the ground up, starting with a single switch. Wire switches into logic gates, gates into adders, and see how they add two numbers from 0 to 255.
 
-## The five stages
+
+## The workbench ladder (`index.html`)
+
+The main page is a nine-step ladder set on an early-1900s wooden workbench. Each step unlocks when the thing you built works, and what you build becomes a part in the tray for later steps:
+
+1. **Battery.** Stack voltaic cells (about 1 V each) into a pile that reads exactly 3 V.
+2. **Wire and bulb.** Wire the pile to a small bulb so the filament glows (a short circuit doesn't count).
+3. **Knife switch.** Add a switch, then turn the bulb on, off and on again with it.
+4. **Electromagnet.** Wind enough insulated wire (60 turns or more) to lift the iron, then open the switch and drop it.
+5. **Relay.** Light a bulb through the normally-open contact, then through the normally-closed one.
+6. **Gates.** Build NOT, AND and OR from relays and pass each truth table, then make XOR from those modules.
+7. **Binary.** Use eight bulbs to show 13, then 29, then 42.
+8. **Half adder, then full adder.** Build each from gate modules and pass its truth table.
+9. **8-bit adder.** Put eight full adders in the slots, wire the carry chain and add 13 + 29 = 42.
+
+Drag parts from the tray, or tap one to place it. Wire them by tapping or dragging from one brass screw to another. Under the bench, a DC solver runs current through the circuit you actually built: cell polarity, bulb current, relay pull-in and short circuits all count. Steps 6 to 9 hand over to the gate-level simulator in `js/sim.js`.
+
+Progress is saved in `localStorage`. **Reset progress** clears it, but step 1 always stays open. `?unlock=all` opens every step, and `?step=N` jumps to one. Sound is off until you turn it on. **Calm motion**, or the system's reduced-motion setting, stops the animations.
+
+The step text comes word for word from [docs/ladder-text.md](docs/ladder-text.md). The art is Henri's (`design/bench/`) and the sounds are Michael's (`design/sounds/`).
+
+## The classic simulator (`classic.html`)
+
+The original five-stage simulator lives on at `classic.html`.
+
+### The five stages
 
 0. **Switches.** A switch drives a lamp: closed is 1, open is 0. In a real computer the switch is a transistor (or, in early machines, a relay).
 1. **Gates.** Switches wired into gates: AND (two in series), OR (two in parallel), NOT (a normally-closed switch), and XOR, built from the other three as (A OR B) AND NOT (A AND B).
@@ -70,43 +95,62 @@ cd eight-bit-adder
 python3 -m http.server 8000
 ```
 
-Then visit <http://localhost:8000>.
+Then visit <http://localhost:8000> for the ladder or <http://localhost:8000/classic.html> for the classic page.
 
-You can also open `index.html` directly, but browsers block the page from reading `docs/` over `file://`, so you'll see short placeholder text instead of the full explanations and tooltips.
+You can also open the pages directly, but browsers block the page from reading `docs/` over `file://`, so you'll see short placeholder text instead of the full explanations and tooltips.
 
-Handy for testing: URL options such as `?stage=ripple&a=127&b=1&cin=0&mode=step&depth=1&zoom=7&gate=XOR` open the page in a given state.
+Handy for testing on the classic page: URL options such as `?stage=ripple&a=127&b=1&cin=0&mode=step&depth=1&zoom=7&gate=XOR` open the page in a given state.
 
 ## Files
 
 ```
 eight-bit-adder/
 ├── README.md                this file
-├── index.html               the page
+├── index.html               the 9-step workbench ladder
+├── classic.html             the original five-stage simulator
 ├── css/
-│   └── app.css              layout and states on top of design/style.css
+│   ├── app.css              classic page: layout and states on top of design/style.css
+│   └── ladder.css           ladder page layout
 ├── js/
 │   ├── sim.js               gate-level simulator: every value is computed gate by gate
 │   ├── draw.js              draws each stage as SVG
 │   ├── levels.js            the switches → gate → module animation
 │   ├── text.js              loads docs/ text (with short fallbacks)
-│   └── app.js               state, inputs, timing modes, rendering
+│   ├── app.js               classic page: state, inputs, timing modes, rendering
+│   └── ladder/              the ladder: circuit.js (DC + logic solver), text.js (reads ladder-text.md),
+│                            art.js, bench.js (tray, parts, wiring), app.js (steps, unlocks, saving)
 ├── docs/
 │   ├── page-text.md         on-page paragraphs and truth tables (read by the page)
+│   ├── ladder-text.md       step text for the ladder (read verbatim by index.html)
 │   └── tooltips.json        tooltip text for every control, keyed by #id (read by the page)
 ├── design/
 │   ├── style.css            the visual style
 │   ├── LAYOUT.md            layout plan (bit order, phone vs. desktop)
 │   ├── TRANSITIONS.md       the switches → gate → module transition
+│   ├── CHANGES-2.md         second design review: what changed and what to apply
+│   ├── CHANGES-2-ken.diff   the exact code edits proposed in that review
+│   ├── wires.js             wire-drawing helpers: crossings, half-adder boxes, the full-width 8-bit gate view
+│   ├── transitions.js       Expand/Package animations for stages 2–4 (reduced-motion safe)
 │   ├── mockup.html, mockup-desktop.png, mockup-phone.png   early style mockup
 │   ├── gates-preview.html/.png, parts-preview.html/.png    previews of the drawings
 │   ├── transition-demo.html, transition-frames.png         transition demo and frames
+│   ├── xor-relay-preview.html/.png                         the XOR relay circuit in all 4 input states
+│   ├── review-*.png         renders of the app from the second design review
+│   ├── CHANGES-3.md         third design review: the workbench art
+│   ├── bench/               Henri's workbench art: bench.js (BENCH helpers), bench.css, bench-art.js,
+│   │                        BENCH-PINS.md, ANIMATION.md, previews and mockups
+│   ├── sounds/              Michael's sounds (mp3/ogg) and sfx.js
 │   ├── gates/               AND, OR, NOT, XOR symbols (SVGs, gates.js, gates-gen.py, PINS.md)
-│   └── parts/               battery, switch, lamp, ground, relays, transistor
+│   └── parts/               battery, switch, lamp, ground, relays, transistor, and
+│                            xor-relay.svg (the whole XOR gate built from relays)
 │                            (SVGs, parts.js, parts-gen.py, PINS.md)
 ├── tests/
-│   ├── addertest.js         browser tests (puppeteer-core + Chrome, page served on port 8770)
-│   └── addercapture.js      captures the screenshots in shots/
-└── shots/                   screenshots, a slow-mode video and test results
+│   ├── addertest.js         ladder browser tests, then runs classictest.js (puppeteer-core + Chrome, port 8770)
+│   ├── classictest.js       classic page browser tests
+│   ├── laddercapture.js     captures the ladder screenshots in screenshots/
+│   └── addercapture.js      captures the classic screenshots in shots/
+├── screenshots/             ladder screenshots, desktop (1280) and phone (390)
+└── shots/                   classic screenshots, a slow-mode video and test results
 ```
 
 The explanation paragraphs and truth tables shown on the page are in [docs/page-text.md](docs/page-text.md).

@@ -1,0 +1,54 @@
+<!doctype html><meta charset="utf-8"><title>Bench parts preview</title>
+<link rel="stylesheet" href="../style.css"><link rel="stylesheet" href="bench.css">
+<style>
+body{max-width:none;padding:18px;background:#15110d}
+h1{color:#f1e6cc;font-family:var(--bn-serif);letter-spacing:.04em}
+.bn-scene{padding:18px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;min-height:0}
+.cell{background:rgba(30,16,6,.28);border-radius:14px;padding:10px;box-shadow:inset 0 0 0 1px rgba(255,220,170,.12)}
+.cell h4{margin:0 0 6px;font:700 12px var(--bn-serif);letter-spacing:.08em;text-transform:uppercase;color:#f4e2bf;text-shadow:0 1px 0 #2a1505}
+.row{display:flex;gap:12px;align-items:flex-end;justify-content:space-around;flex-wrap:wrap}
+.st{display:flex;flex-direction:column;align-items:center;gap:4px;font:700 10px var(--mono);color:#f1dcb6}
+.wide{grid-column:span 2}.full{grid-column:1/-1}
+svg.wires{width:100%;height:auto}
+.row>.module{flex:none}
+</style>
+<h1>Workbench parts — every part in every state</h1>
+<div class="bn-scene" id="b"></div>
+<script src="bench-art.js"></script><script src="bench.js"></script>
+<script>
+BENCH.installDefs();
+const b=document.getElementById('b'); b.insertAdjacentHTML('afterbegin',BENCH.benchTop());
+const cell=(t,html,cls='')=>b.insertAdjacentHTML('beforeend',`<div class="cell ${cls}"><h4>${t}</h4><div class="row">${html}</div></div>`);
+const st=(lab,svg)=>`<div class="st">${svg}<span>${lab}</span></div>`;
+cell('Carbon lamp · --heat',[0,.3,.6,1].map(h=>st('heat '+h,BENCH.part('lamp',`style='--heat:${h};width:80px;height:auto'`))).join(''),'wide');
+cell('Dry cell / wet cell',st('dry cell',BENCH.part('dry-cell',"style='width:62px;height:auto'"))+st('wet cell',BENCH.part('wet-cell',"style='width:92px;height:auto'")));
+cell('Bare bulb (binary row)',[0,.5,1].map(h=>st('heat '+h,BENCH.part('bulb',`style='--heat:${h};width:48px;height:auto'`))).join(''));
+cell('Knife switch',st('open',BENCH.part('knife-switch',"style='width:150px;height:auto'"))+st('closed · live',BENCH.part('knife-switch',"class='closed on' style='width:150px;height:auto'")),'wide');
+cell('Nail electromagnet + iron',st('off',BENCH.part('magnet',"style='width:170px;height:auto'"))+st('energized',BENCH.part('magnet',"class='on' style='width:170px;height:auto'")),'wide');
+cell('Armature relay',st('rest (NC closed)',BENCH.part('relay',"style='width:170px;height:auto'"))+st('energized (NO closed)',BENCH.part('relay',"class='energized' style='width:170px;height:auto'")),'wide');
+cell('Terminal · screw',st('loose',BENCH.part('terminal',"style='width:70px;height:auto' id='t0'"))+st('tight + wire',BENCH.part('terminal',"style='width:70px;height:auto' id='t1'"))+st('tight · live',BENCH.part('terminal',"style='width:70px;height:auto' id='t2'"))+st('spark',BENCH.part('spark',"style='width:50px;height:auto' id='sp'"))+st('iron',BENCH.part('iron',"style='width:40px;height:auto'")),'wide');
+// wires
+let w=`<svg class='wires' viewBox='0 0 560 210'>`;
+['brown','red','green','black','cream'].forEach((c,i)=>{const y=20+i*38;
+  w+=BENCH.wire(20,y,170,y+10,{color:c,sag:.06})+BENCH.wire(200,y,350,y+10,{color:c,sag:.06,cls:'on'})+BENCH.wire(380,y,540,y+10,{color:c,sag:.06,cls:'x'});});
+w+=`<text x='95' y='205' text-anchor='middle' fill='#f1dcb6' font-size='11' font-family='monospace'>0</text><text x='275' y='205' text-anchor='middle' fill='#f1dcb6' font-size='11' font-family='monospace'>1 (amber overlay)</text><text x='460' y='205' text-anchor='middle' fill='#f1dcb6' font-size='11' font-family='monospace'>not computed</text></svg>`;
+cell('Cloth-covered wire · 5 colours × 0 / 1 / unknown',w,'wide');
+cell('Wire sag + current flow',`<svg class='wires' viewBox='0 0 560 210'>${BENCH.wire(30,40,250,40,{sag:.05,cls:'on flow'})}${BENCH.wire(30,90,250,90,{sag:.12,color:'red'})}${BENCH.wire(30,140,250,140,{sag:.22,color:'green',cls:'on'})}${BENCH.wire(300,30,520,180,{sag:.1,color:'black',cls:'on flow'})}${BENCH.wire(300,180,520,40,{sag:.1,color:'cream'})}<text x='140' y='200' text-anchor='middle' fill='#f1dcb6' font-size='11' font-family='monospace'>sag .05 / .12 / .22</text></svg>`,'wide');
+// tray with parts
+cell('Parts tray (drawer)',`<div style="position:relative;width:360px">${BENCH.part('tray',"style='width:360px;height:auto'")}
+ <div style="position:absolute;left:14px;top:8px;width:78px;display:flex;justify-content:center">${BENCH.part('bulb',"style='width:38px;height:auto'")}</div>
+ <div style="position:absolute;left:100px;top:12px;width:78px;display:flex;justify-content:center">${BENCH.part('dry-cell',"style='width:34px;height:auto'")}</div>
+ <div style="position:absolute;left:186px;top:34px;width:78px;display:flex;justify-content:center">${BENCH.part('knife-switch',"style='width:76px;height:auto'")}</div>
+ <div style="position:absolute;left:272px;top:40px;width:78px;display:flex;justify-content:center">${BENCH.part('iron',"style='width:24px;height:auto'")}${BENCH.part('terminal',"style='width:34px;height:auto'")}</div></div>`,'wide');
+cell('Modules (steps 6–9)',`<div class="module bench" style="margin:10px 22px"><div class="mpins in"><div class="mpin on"><span>A</span></div><div class="mpin"><span>B</span></div></div><div class="mtitle"><span>Half adder</span></div><div class="mpins out"><div class="mpin on"><span>Sum</span></div><div class="mpin"><span>Carry</span></div></div></div>
+ <div class="module bench bakelite on" style="margin:10px 22px"><div class="mpins in"><div class="mpin on"><span>A</span></div><div class="mpin on"><span>B</span></div><div class="mpin x"><span>Cin</span></div></div><div class="mtitle"><span>Full adder</span></div><div class="mpins out"><div class="mpin"><span>S</span></div><div class="mpin on"><span>Cout</span></div></div></div>`,'wide');
+cell('Step ladder',`<ol class="ladder" style="width:240px"><li class="rung done"><span class="n">1</span>Light a bulb</li><li class="rung done"><span class="n">2</span>A switch</li><li class="rung current"><span class="n">3</span>Two in a row: AND</li><li class="rung locked"><span class="n">4</span>Side by side: OR</li></ol>`);
+cell('Goal card',`<div class="goal-card" style="width:250px"><h3>Goal</h3><p>Make the bulb light only when <b>both</b> switches are closed.</p><ul class="checks"><li class="ok">Bulb lights with A and B</li><li>Stays dark with only one</li></ul></div>`);
+cell('Binary row · 181 = 1011 0101',`<div id="br" style="width:100%"></div>`,'full');
+BENCH.binaryRow(document.getElementById('br'),181);
+// terminals: tighten (instant) for t1/t2
+['#t1','#t2'].forEach(s=>{const g=document.querySelector(s+' .bn-screw'); g.querySelector('.slot').style.transition='none'; BENCH.tighten(g); g.getAnimations({subtree:true}).forEach(a=>a.finish());});
+document.querySelector('#t2 .bn-screw').classList.add('on');
+const sp=document.querySelector('#sp .bn-spark'); sp.style.opacity=1;
+document.documentElement.dataset.ready=1;
+</script>

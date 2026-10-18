@@ -1,0 +1,97 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Step 3 on the bench</title>
+<link rel="stylesheet" href="../style.css"><link rel="stylesheet" href="bench.css">
+<style>
+body{max-width:none;margin:0;padding:0;background:radial-gradient(120% 80% at 50% 0%,#2a1a0e,#120b06 70%);color:#f1dcb6;min-height:100vh}
+.wrap{max-width:1240px;margin:0 auto;padding:18px 20px 28px}
+.hdr{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.plate{font:700 15px var(--bn-serif);letter-spacing:.12em;text-transform:uppercase;color:#3b2508;padding:8px 22px;border-radius:5px;
+  background:radial-gradient(circle at 9px 50%,#5b3f0e 0 2px,#f5dc96 2.5px 3.6px,transparent 4px),radial-gradient(circle at calc(100% - 9px) 50%,#5b3f0e 0 2px,#f5dc96 2.5px 3.6px,transparent 4px),linear-gradient(180deg,#f8e3a0,#d8b35a 45%,#b48a35 55%,#e9c66b);
+  box-shadow:inset 0 0 0 1px #6e4f16,0 2px 4px rgba(0,0,0,.5);text-shadow:0 1px 0 rgba(255,245,210,.6)}
+.hdr .step{font:700 13px var(--mono);color:#e2cda5;opacity:.9}
+.hdr .sp{flex:1}
+.grid{display:grid;grid-template-columns:290px 1fr;gap:20px;align-items:start}
+.side{display:flex;flex-direction:column;gap:18px}
+.side h5,.main h5{margin:0 0 8px;font:700 11px var(--bn-serif);letter-spacing:.14em;text-transform:uppercase;color:#cdb88f}
+.scene{padding:0;min-height:0;aspect-ratio:900/520}
+.scene>svg.stage{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.under{display:grid;grid-template-columns:1fr auto;gap:18px;margin-top:16px;align-items:center}
+.caption{font:13px/1.45 var(--bn-serif);color:#e8d5ae;max-width:52ch}
+.caption b{color:var(--bn-amber)}
+.nextmod{display:flex;align-items:center;gap:10px;font:12px var(--mono);color:#cdb88f}
+.readout{margin-top:18px}
+@media (max-width:640px){
+  .wrap{padding:12px 12px 20px}
+  .hdr{flex-wrap:wrap;gap:8px;margin-bottom:12px}.plate{font-size:12.5px;padding:6px 16px}
+  .grid{grid-template-columns:1fr;gap:14px}
+  .scene{aspect-ratio:400/560;border-radius:16px}
+  .side{display:contents}
+  .ladderbox{order:3}.goalbox{order:1}.main{order:2}
+  .ladder .rung:not(.current):not(.done){display:none}
+  .under{grid-template-columns:1fr}
+}
+</style>
+<div class="wrap">
+  <div class="hdr"><div class="plate">John’s Bench</div><span class="step">Step 3 of 9 · Two in a row: AND</span><span class="sp"></span></div>
+  <div class="grid">
+    <div class="side">
+      <div class="ladderbox"><h5>Steps</h5>
+        <ol class="ladder">
+          <li class="rung done"><span class="n">1</span>Light a bulb</li>
+          <li class="rung done"><span class="n">2</span>Add a switch</li>
+          <li class="rung current" aria-current="step"><span class="n">3</span>Two in a row: AND</li>
+          <li class="rung locked"><span class="n">4</span>Side by side: OR</li>
+          <li class="rung locked"><span class="n">5</span>The relay: NOT</li>
+          <li class="rung locked"><span class="n">6</span>Half adder</li>
+          <li class="rung locked"><span class="n">7</span>Full adder</li>
+          <li class="rung locked"><span class="n">8</span>Ripple carry</li>
+          <li class="rung locked"><span class="n">9</span>8-bit adder</li>
+        </ol></div>
+      <div class="goalbox"><div class="goal-card met"><h3>Goal</h3><p>Wire two knife switches <b>in a row</b> so the lamp lights only when <b>both</b> are closed.</p>
+        <ul class="checks"><li class="ok">Lamp lights with A and B closed</li><li class="ok">Dark with only A</li><li class="ok">Dark with only B</li></ul></div></div>
+    </div>
+    <div class="main">
+      <div class="bn-scene scene" id="scene"></div>
+      <div class="under"><p class="caption">Both blades are down, so current runs from the cell, through <b>A</b>, through <b>B</b>, and into the lamp. Open either one and the circuit is broken. That is <b>AND</b>.</p>
+        <div class="nextmod"><span>next up →</span><div class="module bench bakelite" style="margin:0 16px;min-width:0"><div class="mpins in"><div class="mpin"><span>A</span></div><div class="mpin"><span>B</span></div></div><div class="mtitle"><span>OR</span></div><div class="mpins out"><div class="mpin"><span>Q</span></div></div></div></div></div>
+      <div class="readout"><h5>Readout · lamp = bit 0</h5><div id="br"></div></div>
+    </div>
+  </div>
+</div>
+<script src="bench-art.js"></script><script src="bench.js"></script>
+<script>
+BENCH.installDefs();
+const phone=matchMedia('(max-width:640px)').matches;
+const sc=document.getElementById('scene');
+const L=phone?{vb:[400,560],tray:[70,8,.72],cell:[24,128,1.15],lamp:[250,104,1.3],kA:[12,394,1.02],kB:[212,394,1.02],term:[150,262,1.15],
+      ctr:{cA:[0,330],AB:null,Bl:[398,440],lt:null,tc:[110,200]}}
+  :{vb:[900,520],tray:[24,14,1],cell:[66,176,1.5],lamp:[688,92,1.75],kA:[186,326,1.4],kB:[452,326,1.4],term:[444,186,1.4],
+      ctr:{cA:[-80,290],AB:null,Bl:null,lt:null,tc:null}};
+const cell=BENCH.place('dry-cell',...L.cell), lamp=BENCH.place('lamp',...L.lamp,"class='on' style='--heat:1'"),
+      kA=BENCH.place('knife-switch',...L.kA,"class='closed on'"), kB=BENCH.place('knife-switch',...L.kB,"class='closed on'"),
+      term=BENCH.place('terminal',...L.term), tray=BENCH.place('tray',...L.tray);
+const [tx,ty,ts]=L.tray, slot=i=>tx+(12+i*85)*ts;
+const W=(a,b,o)=>BENCH.wire(a[0],a[1],b[0],b[1],Object.assign({cls:'on flow'},o));
+let s=`<svg class='stage' viewBox='0 0 ${L.vb[0]} ${L.vb[1]}'>`;
+s+=tray.svg;
+const sp="class='spare'";
+s+=BENCH.place('bulb',slot(0)+17*ts,ty+12*ts,.5*ts,sp).svg+BENCH.place('iron',slot(1)+20*ts,ty+40*ts,1*ts,sp).svg+BENCH.place('iron',slot(1)+40*ts,ty+52*ts,1*ts,sp).svg
+  +BENCH.place('terminal',slot(2)+14*ts,ty+30*ts,1*ts,sp).svg+BENCH.place('wet-cell',slot(3)+12*ts,ty+12*ts,.52*ts,sp).svg;
+s+=cell.svg+term.svg+kA.svg+kB.svg+lamp.svg;
+// engraved labels A / B
+const lab=(k,t)=>`<text x='${k.pin('a')[0]+ (k.pin('b')[0]-k.pin('a')[0])/2}' y='${k.pin('a')[1]+22}' text-anchor='middle' font-family='Georgia,serif' font-weight='700' font-size='15' fill='#f6e3bd' stroke='#2a1505' stroke-width='.6' paint-order='stroke' letter-spacing='2'>${t}</text>`;
+s+=lab(kA,'A')+lab(kB,'B');
+s+=`<g class='wires'>`;
+s+=W(cell.pin('+'),kA.pin('a'),{color:'red',ctrl:L.ctr.cA||undefined,sag:.1});
+s+=W(kA.pin('b'),kB.pin('a'),{color:'brown',sag:.08});
+s+=W(kB.pin('b'),lamp.pin('b'),{color:'brown',ctrl:L.ctr.Bl||undefined,sag:.1});
+s+=W(lamp.pin('a'),term.pin('t'),{color:'green',sag:.08});
+s+=W(term.pin('t'),cell.pin('-'),{color:'green',ctrl:L.ctr.tc||undefined,sag:.1});
+s+=`</g></svg>`;
+sc.insertAdjacentHTML('beforeend',BENCH.benchTop()+s);
+// all screws in the loop are tight and live
+document.documentElement.classList.add('bn-reduce');   // set instantly for the still
+sc.querySelectorAll('svg.stage > svg:not(.spare):not(.bn-tray) .bn-screw').forEach(g=>{BENCH.tighten(g);g.classList.add('on');g.classList.remove('bn-flash');});
+document.documentElement.classList.remove('bn-reduce');
+BENCH.binaryRow(document.getElementById('br'),1);
+document.documentElement.dataset.ready=1;
+</script>

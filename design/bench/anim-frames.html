@@ -1,0 +1,69 @@
+<!doctype html><meta charset="utf-8"><title>Bench animation frames</title>
+<link rel="stylesheet" href="../style.css"><link rel="stylesheet" href="bench.css">
+<style>
+body{max-width:none;padding:18px;background:#15110d;color:#f1dcb6}
+h1{color:#f1e6cc;font-family:var(--bn-serif);letter-spacing:.04em;margin:0 0 4px}
+p.sub{margin:0 0 14px;font:13px var(--mono);color:#cdb88f}
+.bn-scene{padding:16px 16px 6px;min-height:0}
+.arow{display:grid;grid-template-columns:190px repeat(7,1fr);gap:8px;align-items:stretch;margin-bottom:10px}
+.lab{font:700 12px/1.3 var(--bn-serif);letter-spacing:.06em;text-transform:uppercase;color:#f4e2bf;text-shadow:0 1px 0 #2a1505;align-self:center}
+.lab small{display:block;text-transform:none;letter-spacing:0;font:11px/1.35 var(--mono);color:#e2cda5;opacity:.85;margin-top:3px}
+.fr{position:relative;background:rgba(30,16,6,.30);border-radius:10px;box-shadow:inset 0 0 0 1px rgba(255,220,170,.12);display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:8px 4px 4px;min-height:120px;overflow:visible}
+.fr .t{font:700 10px var(--mono);color:#f1dcb6;margin-top:4px;opacity:.9}
+.fr .stage{position:relative;display:flex;align-items:center;justify-content:center;flex:1}
+.fr.empty{background:none;box-shadow:none}
+.arow.bn-reduce .fr{background:rgba(20,30,40,.28)}
+</style>
+<h1>Workbench animations — frozen frames</h1>
+<p class="sub">Each cell is the real bench.js/bench.css animation paused at the time shown. Bottom row: the reduced-motion version (instant change + brief highlight).</p>
+<div class="bn-scene" id="b"></div>
+<script src="bench-art.js"></script><script src="bench.js"></script>
+<script>
+BENCH.installDefs();
+const b=document.getElementById('b'); b.insertAdjacentHTML('afterbegin',BENCH.benchTop());
+const NST=window.setTimeout.bind(window);const tick=()=>new Promise(r=>NST(r,0));
+function row(label,note,cls=''){const r=document.createElement('div');r.className='arow '+cls;r.innerHTML=`<div class="lab">${label}<small>${note}</small></div>`;b.appendChild(r);return r;}
+function frame(r,html,t){const f=document.createElement('div');f.className='fr';f.innerHTML=`<div class="stage">${html}</div><span class="t">${t}</span>`;r.appendChild(f);return f;}
+const inCell=(f,a)=>{const t=a.effect&&a.effect.target;return t&&f.contains(t)};
+// run action in cell f, freeze everything in it at time t (ms); setTimeout-spawned work (sparks) is replayed with its own offset
+async function freeze(f,t,action){
+  const pend=[];const st=window.setTimeout;window.setTimeout=(fn,d)=>{pend.push([fn,d||0]);return 0};
+  f.querySelectorAll('*').forEach(e=>getComputedStyle(e).transform); getComputedStyle(f.querySelector('svg')||f).getPropertyValue('--heat');
+  try{action(f.querySelector('.stage svg'),f)}finally{window.setTimeout=st}
+  document.body.offsetWidth;
+  const seen=new Set();
+  const pause=(off)=>document.getAnimations().filter(a=>inCell(f,a)&&!seen.has(a)).forEach(a=>{seen.add(a);a.pause();a.currentTime=Math.max(0,t-off);});
+  pause(0);
+  for(const [fn,d] of pend.sort((x,y)=>x[1]-y[1])){ if(d>t) continue;
+    const st2=window.setTimeout;window.setTimeout=(fn2,d2)=>{if(d+(d2||0)<=t)pend.push([fn2,d+(d2||0)]);return 0};
+    fn(); await tick(); await Promise.resolve(); window.setTimeout=st2; pause(d); }
+}
+(async()=>{
+  // reduced-motion row first (it toggles html.bn-reduce while acting)
+  const R=row('Reduced motion','final state at once + 450 ms highlight; no swing, overshoot, spark or burst','bn-reduce');
+  document.documentElement.classList.add('bn-reduce');
+  const rm=[['lamp',"style='width:46px;height:auto'",s=>BENCH.heat(s,1),'lamp on'],
+    ['knife-switch',"style='width:120px;height:auto'",s=>BENCH.knife(s,true),'knife closed'],
+    ['magnet',"style='width:130px;height:auto'",s=>BENCH.magnet(s,true),'magnet on'],
+    ['relay',"style='width:118px;height:auto'",s=>BENCH.relay(s,true),'relay on'],
+    ['terminal',"style='width:60px;height:auto'",s=>BENCH.tighten(s.querySelector('.bn-screw')),'screw tight']];
+  for(const [k,a,fn,t] of rm){const f=frame(R,BENCH.part(k,a),t+' · 100 ms');await freeze(f,100,fn);}
+  for(let i=rm.length;i<7;i++){const e=document.createElement('div');e.className='fr empty';R.appendChild(e);}
+  document.documentElement.classList.remove('bn-reduce');
+  b.appendChild(R); // keep it last visually
+  const rows=[
+    ['Filament warming','--heat 0→1, 700 ms transition; colour, glow, halo',[0,90,180,280,400,550,700],"lamp","style='width:58px;height:auto'",s=>BENCH.heat(s,1)],
+    ['Knife switch closing','blade swings about the hinge (34,70) in 360 ms; spark at the jaw; settle wobble',[0,120,220,300,355,400,520],"knife-switch","style='width:132px;height:auto'",s=>BENCH.knife(s,true)],
+    ['Iron snaps to nail','230 ms, overshoot −14 → −11.4 → −12 px',[0,80,120,143,175,200,230],"magnet","style='width:136px;height:auto'",s=>BENCH.magnet(s,true)],
+    ['Relay pulls in','armature about (92,22): −7.4° overshoot, bounce to −6.5°; spark at NO ~95 ms',[0,50,95,105,140,165,190],"relay","style='width:124px;height:auto'",s=>BENCH.relay(s,true)],
+    ['Spark','160 ms flash + star when a circuit closes',[0,20,40,60,90,120,155],"spark","style='width:56px;height:auto'",s=>BENCH.spark(s.querySelector('.bn-spark')||s)],
+    ['Screw tightening','slot 0→270°, copper end snugs under the washer, 480 ms',[0,60,130,200,290,380,480],"terminal","style='width:70px;height:auto'",s=>BENCH.tighten(s.querySelector('.bn-screw'))],
+  ];
+  for(const [lab,note,ts,k,a,fn] of rows){const r=row(lab,note);for(const t of ts){const f=frame(r,BENCH.part(k,a),t+' ms');await freeze(f,t,fn);} }
+  // burst
+  const br=row('Step solved — burst','brass sparks, 600–900 ms');
+  for(const t of [0,60,140,240,380,560,800]){const f=frame(br,`<div style="width:120px;height:90px"></div>`,t+' ms');f.style.overflow='hidden';await freeze(f,t,(s,fr)=>BENCH.burst(fr.querySelector('.stage'),60,48));}
+  b.appendChild(R);
+  document.documentElement.dataset.ready=1;
+})();
+</script>

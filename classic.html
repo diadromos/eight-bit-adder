@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>8-bit Adder</title>
+<link rel="icon" href="data:,">
+<!-- Visual style: Henri Matisse (design/style.css). css/app.css = layout glue + states his kit doesn't cover. -->
+<link rel="stylesheet" href="design/style.css">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<h1>8-bit Adder</h1>
+<nav class="tabs" role="tablist" aria-label="Stages">
+  <button class="tab" role="tab" id="tab-switch" data-stage="switch" aria-controls="stage-switch" aria-selected="false"><span class="n">0</span>Switch</button>
+  <button class="tab" role="tab" id="tab-gates" data-stage="gates" aria-controls="stage-gates" aria-selected="false"><span class="n">1</span>Gates</button>
+  <button class="tab" role="tab" id="tab-half" data-stage="half" aria-controls="stage-half" aria-selected="false"><span class="n">2</span>Half adder</button>
+  <button class="tab" role="tab" id="tab-full" data-stage="full" aria-controls="stage-full" aria-selected="false"><span class="n">3</span>Full adder</button>
+  <button class="tab" role="tab" id="tab-ripple" data-stage="ripple" aria-controls="stage-ripple" aria-selected="true"><span class="n">4</span>8-bit adder</button>
+</nav>
+<div class="top">
+<div class="side">
+  <section class="panel" id="inputs" data-for="gates half full ripple">
+    <div data-for="gates">
+      <h2>Gate</h2>
+      <div class="seg" id="gatePick" role="radiogroup" aria-label="Gate">
+        <button role="radio" data-gate="AND" aria-checked="true">AND</button><button role="radio" data-gate="OR" aria-checked="false">OR</button><button role="radio" data-gate="NOT" aria-checked="false">NOT</button><button role="radio" data-gate="XOR" aria-checked="false">XOR</button>
+      </div>
+      <div class="pair"><div class="operand single"><div class="name">A</div><div class="bits"><button class="bit" id="gateA" aria-pressed="false" aria-label="A">0</button></div></div><div class="operand single"><div class="name">B</div><div class="bits"><button class="bit" id="gateB" aria-pressed="false" aria-label="B">0</button></div></div></div>
+    </div>
+    <div data-for="half"><h2>Inputs</h2><div class="pair"><div class="operand single"><div class="name">A</div><div class="bits"><button class="bit" id="haA" aria-pressed="false" aria-label="A">0</button></div></div><div class="operand single"><div class="name">B</div><div class="bits"><button class="bit" id="haB" aria-pressed="false" aria-label="B">0</button></div></div></div></div>
+    <div data-for="full"><h2>Inputs</h2><div class="pair"><div class="operand single"><div class="name">A</div><div class="bits"><button class="bit" id="faA" aria-pressed="false" aria-label="A">0</button></div></div><div class="operand single"><div class="name">B</div><div class="bits"><button class="bit" id="faB" aria-pressed="false" aria-label="B">0</button></div></div><div class="operand single"><div class="name">Cin</div><div class="bits"><button class="bit" id="faC" aria-pressed="false" aria-label="Cin">0</button></div></div></div></div>
+    <div data-for="ripple">
+      <h2>Inputs</h2>
+      <div class="operand"><div class="name">A</div><div class="bits labeled"><button class="bit" id="a7" aria-pressed="false" aria-label="A bit 7">0<span class="idx">7</span></button><button class="bit" id="a6" aria-pressed="false" aria-label="A bit 6">0<span class="idx">6</span></button><button class="bit" id="a5" aria-pressed="false" aria-label="A bit 5">0<span class="idx">5</span></button><button class="bit" id="a4" aria-pressed="false" aria-label="A bit 4">0<span class="idx">4</span></button><span class="nib"></span><button class="bit" id="a3" aria-pressed="false" aria-label="A bit 3">0<span class="idx">3</span></button><button class="bit" id="a2" aria-pressed="false" aria-label="A bit 2">0<span class="idx">2</span></button><button class="bit" id="a1" aria-pressed="false" aria-label="A bit 1">0<span class="idx">1</span></button><button class="bit" id="a0" aria-pressed="false" aria-label="A bit 0">0<span class="idx">0</span></button></div>
+        <div class="nums"><label>Decimal <input type="number" id="aDec" min="0" max="255" step="1" inputmode="numeric" value="0"></label><label>Hex <input type="text" id="aHex" maxlength="2" autocomplete="off" spellcheck="false" value="00"></label></div></div>
+      <div class="operand"><div class="name">B</div><div class="bits labeled"><button class="bit" id="b7" aria-pressed="false" aria-label="B bit 7">0<span class="idx">7</span></button><button class="bit" id="b6" aria-pressed="false" aria-label="B bit 6">0<span class="idx">6</span></button><button class="bit" id="b5" aria-pressed="false" aria-label="B bit 5">0<span class="idx">5</span></button><button class="bit" id="b4" aria-pressed="false" aria-label="B bit 4">0<span class="idx">4</span></button><span class="nib"></span><button class="bit" id="b3" aria-pressed="false" aria-label="B bit 3">0<span class="idx">3</span></button><button class="bit" id="b2" aria-pressed="false" aria-label="B bit 2">0<span class="idx">2</span></button><button class="bit" id="b1" aria-pressed="false" aria-label="B bit 1">0<span class="idx">1</span></button><button class="bit" id="b0" aria-pressed="false" aria-label="B bit 0">0<span class="idx">0</span></button></div>
+        <div class="nums"><label>Decimal <input type="number" id="bDec" min="0" max="255" step="1" inputmode="numeric" value="0"></label><label>Hex <input type="text" id="bHex" maxlength="2" autocomplete="off" spellcheck="false" value="00"></label></div></div>
+      <div class="cinrow"><div class="operand single"><div class="name">Cin</div><div class="bits"><button class="bit" id="cin" aria-pressed="false" aria-label="Cin">0</button></div></div><div class="controls"><button class="btn" id="random">Random</button><button class="btn ghost" id="reset">Reset</button></div></div>
+    </div>
+  </section>
+  <section class="panel result" data-for="ripple">
+    <h2>Sum</h2>
+    <div id="sum" data-value=""><div class="bin" id="sumBin"></div><div class="dec" id="sumDH"></div></div>
+    <div class="dec" id="decLine"></div>
+    <div class="dec signed" id="signedLine">Signed: <span id="aSigned"></span> + <span id="bSigned"></span><span id="cinSigned"></span> = <span id="sumSigned"></span></div>
+    <div class="lights"><span class="light" id="cout" data-value="">Carry-out</span><span class="light warn" id="overflow" data-value="">Overflow (signed)</span></div>
+    <details class="ovnote"><summary id="ovSummary">Overflow vs. carry-out</summary><div id="ovText"></div></details>
+  </section>
+  <section class="panel" id="timing" data-for="gates half full ripple">
+    <h2>Timing</h2>
+    <div class="controls">
+      <div class="seg" id="mode" role="radiogroup" aria-label="Mode">
+        <button role="radio" data-mode="instant" aria-checked="false">Instant</button><button role="radio" data-mode="slow" aria-checked="false">Slow</button><button role="radio" data-mode="step" aria-checked="false">Step</button>
+      </div>
+      <button class="btn primary next" id="step" disabled>Next step</button>
+      <span class="stepinfo" id="stepInfo" aria-live="polite"></span>
+      <label class="speed">Speed<input type="range" id="speed" min="60" max="800" step="20" value="600" aria-label="Speed"><span><i>slower</i><i id="speedVal"></i><i>faster</i></span></label>
+    </div>
+  </section>
+</div>
+<div class="main">
+  <div class="panel modbar" id="modbar" data-for="gates half full ripple">
+    <button class="btn" id="symbolToggle" aria-pressed="false" data-for="gates">Show symbol</button>
+    <button class="btn" id="package">Package as module</button>
+    <button class="btn" id="expand">Expand</button>
+    <span class="muted depth" id="depthInfo"></span>
+  </div>
+  <!-- Stage panels. Paragraphs/tables come verbatim from docs/page-text.md (Joseph) via js/text.js. -->
+  <section class="panel stage" id="stage-switch" role="tabpanel" aria-labelledby="tab-switch" data-for="switch">
+    <h2 data-title="Stage 0">Stage 0</h2><div class="detail" id="draw-switch"></div><div class="explain" data-sec="Stage 0"></div><div class="tt" id="tt-switch"></div>
+  </section>
+  <section class="panel stage" id="stage-gates" role="tabpanel" aria-labelledby="tab-gates" data-for="gates">
+    <h2 data-title="Stage 1">Stage 1</h2>
+    <div class="detail"><div class="lvstage" id="lvstage"><div class="lv-layer" id="lv-circuit"></div><div class="lv-layer" id="lv-gate"></div><div class="lv-layer" id="lv-module"></div></div></div>
+    <div class="explain" data-sec="Stage 1"></div><div class="tt" id="tt-gates"></div><div class="explain" data-sec="Modules"></div>
+  </section>
+  <section class="panel stage" id="stage-half" role="tabpanel" aria-labelledby="tab-half" data-for="half">
+    <h2 data-title="Stage 2">Stage 2</h2><div class="detail swap" id="draw-half"></div><div class="explain" data-sec="Stage 2"></div><div class="tt" id="tt-half"></div>
+  </section>
+  <section class="panel stage" id="stage-full" role="tabpanel" aria-labelledby="tab-full" data-for="full">
+    <h2 data-title="Stage 3">Stage 3</h2><div class="detail swap" id="draw-full"></div><div class="explain" data-sec="Stage 3"></div><div class="tt" id="tt-full"></div>
+  </section>
+  <section class="panel stage" id="stage-ripple" role="tabpanel" aria-labelledby="tab-ripple" data-for="ripple">
+    <h2 data-title="Stage 4">Stage 4</h2><div class="swap" id="draw-ripple"></div><div class="explain" data-sec="Stage 4"></div>
+  </section>
+  <section class="panel" id="zoompanel" data-for="ripple">
+    <h2>Zoom <label class="zoompick"><select id="zoom" aria-label="Bit to zoom"><option value="7">Bit 7</option><option value="6">Bit 6</option><option value="5">Bit 5</option><option value="4">Bit 4</option><option value="3">Bit 3</option><option value="2">Bit 2</option><option value="1">Bit 1</option><option value="0">Bit 0</option></select></label> <span class="muted" style="text-transform:none;letter-spacing:0">full adder</span></h2>
+    <div class="detail-row"><div class="detail" id="draw-zoom"></div><div><div class="tt" id="tt-zoom"></div></div></div>
+    <div class="explain" data-sec="Zoom"></div>
+  </section>
+</div>
+</div>
+<script src="design/gates/gates.js"></script>
+<script src="design/parts/parts.js"></script>
+<script src="design/wires.js"></script>
+<script src="design/transitions.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/text.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/levels.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
