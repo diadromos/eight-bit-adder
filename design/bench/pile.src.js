@@ -23,9 +23,9 @@ function (cells, opt) {
   if (n) s += "<ellipse class='stain' cx='45' cy='131' rx='" + F(29 + Math.min(n, 6)) + "' ry='4.2' fill='#3b2410' opacity='.45'/>";
   // back glass rod (behind the stack)
   s += "<rect class='rod back frame' x='43' y='16' width='4' height='114' rx='2' fill='url(#bn-glassrod)' opacity='.75'/>";
-  // bottom plate (brass disc) with a tab to the - screw
+  // bottom plate (brass disc) with a tab to the - screw. Class 'pile-plate', not 'plate': the ladder's .bn-part .plate is its HTML name label (position/translate)
   s += "<path d='M22 133 C19 136 16 138 16 144' stroke='url(#bn-brass-h)' stroke-width='3' fill='none' stroke-linecap='round'/>";
-  s += band(BASE, BASE + 3.4, 'url(#bn-brass-h)', 'plate bottom', '#5a3f10');
+  s += band(BASE, BASE + 3.4, 'url(#bn-brass-h)', 'pile-plate bottom', '#5a3f10');
   s += "<ellipse cx='45' cy='" + BASE + "' rx='" + RX + "' ry='" + RY + "' fill='url(#bn-brass)' stroke='#5a3f10' stroke-width='.4'/>";
   var y = BASE;
   cells.forEach(function (c, i) {
@@ -50,7 +50,7 @@ function (cells, opt) {
   });
   // top plate + pressure screw down from the yoke
   var tp = y - 3;
-  s += band(tp, y, 'url(#bn-brass-h)', 'plate top', '#5a3f10');
+  s += band(tp, y, 'url(#bn-brass-h)', 'pile-plate top', '#5a3f10');
   s += "<ellipse cx='45' cy='" + F(tp) + "' rx='" + RX + "' ry='" + RY + "' fill='url(#bn-brass)' stroke='#5a3f10' stroke-width='.4'/>";
   s += "<ellipse cx='45' cy='" + F(tp) + "' rx='" + (RX - 6) + "' ry='" + (RY - 1.2) + "' fill='none' stroke='#fff0bd' stroke-width='.5' opacity='.5'/>";
   // + lead: copper wire from the top-plate tab, round the outside of the right rod, down to the + screw

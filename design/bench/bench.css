@@ -218,7 +218,7 @@
 /* ===== step 1: voltaic pile (BENCH.pile) + moving-coil voltmeter (BENCH_ART.voltmeter) ===== */
 .bn-pile .cell{transition:filter var(--t,120ms)}
 .bn-pile.on .cu{filter:drop-shadow(0 0 2px rgba(255,194,71,.55))}
-.bn-pile.on .plate.top,.bn-pile.on .lead{filter:drop-shadow(0 0 2px var(--bn-glow))}
+.bn-pile.on .pile-plate.top,.bn-pile.on .lead{filter:drop-shadow(0 0 2px var(--bn-glow))}
 .bn-pile .cell.flipped .cloth{filter:brightness(.92)}
 .bn-pile .cell:hover .card,.bn-pile .cell.hot .card{filter:brightness(1.25)}
 .bn-pile.one .frame{display:none}      /* single cell in the tray: just the discs on the plinth */
