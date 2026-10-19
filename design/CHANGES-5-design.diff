@@ -1,0 +1,31 @@
+--- a/design/bench/bench.css
++++ b/design/bench/bench.css
+@@ -107,7 +107,7 @@
+   background:radial-gradient(130% 120% at 30% 15%,#7a4423,#3d1e0e 55%,#1c0c04);
+   box-shadow:inset 0 0 0 1px rgba(0,0,0,.6),inset 0 2px 0 rgba(255,200,150,.25),inset 0 -5px 0 rgba(0,0,0,.5),0 8px 0 #120700,0 12px 18px rgba(0,0,0,.55)}
+ /* title on an engraved brass plate with 2 screws */
+-.module.bench>.mtitle{align-self:center;min-width:0;text-wrap:balance;margin:8px 4px;padding:6px 12px;gap:6px;border-radius:5px;font:700 14px/1.1 var(--bn-serif);letter-spacing:.06em;text-transform:uppercase;
++.module.bench>.mtitle{align-self:center;min-width:0;text-wrap:balance;margin:8px 4px;padding:6px 12px;gap:6px;justify-content:safe center;flex-wrap:wrap;border-radius:5px;font:700 14px/1.1 var(--bn-serif);letter-spacing:.06em;text-transform:uppercase;
+   color:var(--bn-engrave);text-shadow:0 1px 0 rgba(255,245,210,.65);
+   background:
+     radial-gradient(circle at 8px 50%,#5b3f0e 0 2px,#f5dc96 2.5px 3.6px,transparent 4px),
+@@ -115,6 +115,19 @@
+     linear-gradient(180deg,#f8e3a0,#d8b35a 45%,#b48a35 55%,#e9c66b);
+   box-shadow:inset 0 0 0 1px #6e4f16,0 1px 2px rgba(0,0,0,.45)}
+ .module.bench .micon{color:var(--bn-engrave);flex:none;width:28px;height:19px}
++/* thumbnails in the parts drawer (zoomed to ~.4). The compartment is 71-77px wide, so the title column held only 26-41px of
++   content at 14px type. "ADDER" (54px) plus the 28px icon overflowed it, and flex centering pushed the overflow out on
++   both sides, so the icon slid under the text. In the drawer the pin letters go (5px once zoomed, unreadable; the brass
++   screws stay), which gives the plate the whole middle of the box. The title is larger, and the icon stacks above it
++   (flex-wrap) whenever icon and title don't fit side by side. The plate screws move to the top corners. */
++.bn-drawer .module.bench .mpin{min-width:30px}
++.bn-drawer .module.bench .mpin>span{display:none}
++.bn-drawer .module.bench .micon{width:30px;height:20px}
++.bn-drawer .module.bench>.mtitle{margin:6px 1px;padding:9px 5px 6px;gap:1px 4px;align-content:center;font-size:18px;line-height:1;letter-spacing:.02em;text-align:center;
++  background:
++    radial-gradient(circle at 5px 5px,#5b3f0e 0 1.6px,#f5dc96 2px 2.8px,transparent 3.2px),
++    radial-gradient(circle at calc(100% - 5px) 5px,#5b3f0e 0 1.6px,#f5dc96 2px 2.8px,transparent 3.2px),
++    linear-gradient(180deg,#f8e3a0,#d8b35a 45%,#b48a35 55%,#e9c66b)}
+ /* pins overhang the box by 14px (mpins margin -14px), so 14px of side margin is enough; style.css's 18px made zoomed thumbnails overflow */
+ .module.bench{margin-inline:14px}
+ .module.bench .micon .body{fill:rgba(59,39,6,.12)}            /* engraved outline on the brass plate, not a dark blob */

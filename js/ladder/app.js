@@ -8,7 +8,7 @@
   const UI = {
     title: "John's Bench", stepOf: (n, t) => `Step ${n} of 9 · ${t}`, steps: 'Steps',
     sound: ['Sound: off', 'Sound: on'], motion: ['Calm motion: off', 'Calm motion: on'], reset: 'Reset progress…',
-    prev: '‹ Previous step', next: 'Next step ›', hints: 'Hints', tray: 'Parts tray', remove: 'Remove selected', clear: 'Clear bench',
+    prev: '‹ Previous step', next: 'Next step ›', hints: 'Hints', tray: 'Parts drawer', remove: 'Remove selected', clear: 'Clear bench',
     test: 'Test the truth table', testing: 'Testing…', testChain: 'Check the carry chain',
     parts: { cell: 'Cell', pile: 'Your pile', lamp: 'Bulb', knife: 'Knife switch', 'knife-a': 'Switch A', 'knife-b': 'Switch B', magnet: 'Electro- magnet', relay: 'Relay',
       NOT: 'NOT', AND: 'AND', OR: 'OR', XOR: 'XOR', HALF: 'Half adder', FULL: 'Full adder' },

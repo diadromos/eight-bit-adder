@@ -43,7 +43,7 @@
     this.host.querySelector('#bench-delete').addEventListener('click', () => this.deleteSelected());
     this.host.querySelector('#bench-clear').addEventListener('click', () => this.clear());
     this.drawerEl = this.host.querySelector('.bn-drawer');
-    this.drawerEl.querySelector('.bn-drawer-pull').addEventListener('click', () => root.BENCH.drawer(this.drawerEl));
+    this.drawerEl.querySelector('.bn-drawer-pull').addEventListener('click', () => { root.BENCH.drawer(this.drawerEl); setTimeout(() => this.layout(), 300); });
     this.buildTray();
     this.bindStage();
     this.ro = new ResizeObserver(() => this.layout()); this.ro.observe(this.el);
@@ -84,7 +84,11 @@
     this.el.style.height = (H * this.scale) + 'px';
     this.slots = this.cfg.slots ? this.cfg.slots(W, H) : [];
     (this.cfg.fixedPos ? this.cfg.fixedPos(W, H) : []).forEach(fp => { const p = this.part(fp.id); if (p) { p.x = fp.x; p.y = fp.y; } });
-    if (changed || !this.drawn) this.renderAll(); else this.drawWires();
+    if (changed || !this.drawn) this.renderAll();
+    else {   // same layout: re-clamp in case the drawer or the viewport moved, and redraw
+      let moved = false; this.parts.forEach(p => { const x = p.x, y = p.y; this.clamp(p); if (p.x !== x || p.y !== y) { this.posPart(p); this.movePartTerms(p); moved = true; } });
+      this.drawWires(); if (moved) this.run('move');
+    }
   };
   P.sizeOf = function (p) {
     const el = this.partsEl.querySelector(`[data-part="${p.id}"]`);
@@ -92,10 +96,24 @@
     if (MOD_SIZE[p.kind]) return MOD_SIZE[p.kind];
     const svg = ART().partSvg(p), m = svg.match(/width='(\d+)' height='(\d+)'/); return m ? [+m[1], +m[2]] : [100, 100];
   };
+  /* the open drawer's footprint in stage units, if any of it lies over the placement area (null otherwise).
+     With Henri's .has-drawer CSS the drawer sits in padding below the stage, so normally this is null; the check keeps parts
+     out from under it whatever the CSS or viewport does. */
+  P.keepOut = function () {
+    if (!this.drawerEl || !this.stage || !this.scale) return null;
+    const d = this.drawerEl.getBoundingClientRect(), s = this.stage.getBoundingClientRect(); if (!d.width || !d.height) return null;
+    const k = { x: (d.left - s.left) / this.scale - 6, y: (d.top - s.top) / this.scale - 6, r: (d.right - s.left) / this.scale + 6, b: (d.bottom - s.top) / this.scale + 6 };
+    return (k.r > 0 && k.x < this.W && k.b > 0 && k.y < this.H) ? k : null;
+  };
   P.clamp = function (p) {
     const [w, h] = this.sizeOf(p);
     p.x = Math.round(Math.max(4, Math.min(this.W - w - 4, p.x))); p.y = Math.round(Math.max(4, Math.min(this.H - h - 4, p.y)));
-    if (p.slot != null && this.slots[p.slot]) { const s = this.slots[p.slot]; p.x = Math.round(s.x + (s.w - w) / 2); p.y = Math.round(s.y + (s.h - h) / 2); }
+    if (p.slot != null && this.slots[p.slot]) { const s = this.slots[p.slot]; p.x = Math.round(s.x + (s.w - w) / 2); p.y = Math.round(s.y + (s.h - h) / 2); return; }
+    const k = this.keepOut();
+    if (k && p.x < k.r && p.x + w > k.x && p.y < k.b && p.y + h > k.y) {   // overlaps the drawer: push it out the shortest way that fits
+      const opts = [[p.x, k.y - h], [k.x - w, p.y], [k.r, p.y], [p.x, k.b]].filter(([x, y]) => x >= 4 && y >= 4 && x + w <= this.W - 4 && y + h <= this.H - 4);
+      if (opts.length) { opts.sort((a, b) => Math.hypot(a[0] - p.x, a[1] - p.y) - Math.hypot(b[0] - p.x, b[1] - p.y)); p.x = Math.round(opts[0][0]); p.y = Math.round(opts[0][1]); }
+    }
   };
   P.renderAll = function () {
     this.drawn = true;

@@ -307,6 +307,40 @@ const TXT = require(path.join(ROOT, 'js/ladder/text.js')); const MD = TXT.parse(
       JSON.stringify({ d0, d1, placed, back })); }
   await p.close();
 
+  // ---------- 12f. no part can sit under the open drawer (step 5, 1280 and 390; also with the drawer forced over the stage) ----------
+  { const res = [];
+    const overlaps = pg => ev(pg, () => { const d = document.querySelector('#bench .bn-drawer').getBoundingClientRect();
+      return [...document.querySelectorAll('#bench .bn-part')].filter(e => { const r = e.getBoundingClientRect(); return r.left < d.right - 1 && r.right > d.left + 1 && r.top < d.bottom - 1 && r.bottom > d.top + 1; }).map(e => e.id); });
+    const dragTo = async (pg, id, fx, fy, mobile) => {   // drag part #id so its centre lands at fraction (fx, fy) of the drawer rect (fy < 0: above it)
+      const [a, z] = await ev(pg, (id, fx, fy) => { const r = document.getElementById('part-' + id).getBoundingClientRect(), d = document.querySelector('#bench .bn-drawer').getBoundingClientRect();
+        return [[r.left + r.width / 2, r.top + r.height / 2], [d.left + d.width * fx, d.top + d.height * fy]]; }, id, fx, fy);
+      await pg.mouse.move(...a); await pg.mouse.down(); await pg.mouse.move(a[0] + 12, a[1] + 12, { steps: 2 }); await pg.mouse.move(...z, { steps: 8 }); await pg.mouse.up(); await sleep(60);
+    };
+    for (const [mobile, force] of [[false, false], [true, false], [false, true], [true, true]]) {
+      const pg = await open('?unlock=all&step=5', { clear: true, mobile });
+      if (force) await pg.addStyleTag({ content: '#bench .bn-drawer{bottom:auto!important;top:42%!important}' });   // a drawer that does overlap the placement area
+      await ev(pg, () => LADDER.bench.layout());
+      const got = { mobile, force, steps: [] }, note = async (what) => got.steps.push([what, (await overlaps(pg)).join(',') || 'ok']);
+      const ids = {}; for (const k of ['lamp', 'relay', 'pile']) ids[k] = await place(pg, k, mobile);
+      await note('tap-placed');
+      for (const [k, fx, fy] of [['lamp', .5, -.05], ['relay', .1, .2], ['pile', .9, .3], ['lamp', 1.05, .5], ['relay', .5, .02]]) {
+        await dragTo(pg, ids[k], fx, fy, mobile);
+        const still = await ev(pg, id => LADDER.bench.parts.some(x => x.id === id), ids[k]);
+        await note(`drag ${k} to ${fx},${fy}${still ? '' : ' (returned to tray)'}`);
+        if (!still) { ids[k] = await place(pg, k, mobile); await note(`re-placed ${k}`); }
+      }
+      // a part whose saved position is under the drawer (e.g. after a resize) is pushed out on layout
+      await ev(pg, () => { const b = LADDER.bench, d = document.querySelector('#bench .bn-drawer').getBoundingClientRect(), s = b.stage.getBoundingClientRect(), q = b.parts[0];
+        q.x = Math.round((d.left + d.width / 2 - s.left) / b.scale) - 20; q.y = Math.round((d.top + 10 - s.top) / b.scale); b.posPart(q); b.layout(); });
+      await sleep(40); await note('forced position + layout');
+      await pg.setViewport(mobile ? { width: 1280, height: 900 } : { width: 390, height: 844, isMobile: true, hasTouch: true }); await sleep(250); await note('resized');
+      const backToTray = got.steps.some(([w]) => /returned to tray/.test(w));
+      got.ok = got.steps.every(([, o]) => o === 'ok') && (force ? true : backToTray);
+      res.push(got); await pg.close();
+    }
+    ok('drawer keep-out: on step 5 at 1280 and 390, tap-placed and dragged parts never end up under the open drawer (also after a forced position, a resize, and with the drawer forced over the stage); a drop on the drawer returns the part',
+      res.every(r => r.ok), JSON.stringify(res)); }
+
   // ---------- 12c. tooltips from docs/ladder-tooltips.json ----------
   { const TIPS = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs/ladder-tooltips.json'), 'utf8')); delete TIPS._format;
     p = await open('?unlock=all&step=5', { clear: true });
