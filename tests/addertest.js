@@ -262,6 +262,51 @@ const TXT = require(path.join(ROOT, 'js/ladder/text.js')); const MD = TXT.parse(
       JSON.stringify({ m0, m1, m2, goal })); }
   await p.close();
 
+  // ---------- 12d. Step 9 at 390px: carry wires between the rows run orthogonally along the gap (finished and while dragging) ----------
+  p = await open('?unlock=all&step=9', { mobile: true, clear: true });
+  { const fc = []; for (let i = 0; i < 8; i++) fc.push(await place(p, 'FULL', true));
+    for (let i = 0; i < 7; i++) if (i !== 3) await wire(p, fc[i], 'Cout', fc[i + 1], 'Cin', true);
+    // drag (rubber band) from bit 3's Cout towards bit 4's Cin, sample it mid-drag, then drop on the screw
+    const ends = await ev(p, (a, z) => [a, z].map(id => { const r = document.getElementById(id).getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }), `term-${fc[3]}-Cout`, `term-${fc[4]}-Cin`);
+    await p.mouse.move(...ends[0]); await p.mouse.down(); await p.mouse.move(ends[0][0] + 30, ends[0][1] - 40, { steps: 3 }); await p.mouse.move(ends[1][0], ends[1][1], { steps: 6 });
+    const geo = (sel, skip) => ev(p, (sel, skip) => {
+      const g = document.querySelector(sel); if (!g) return null; const path = g.querySelector('.cw-base'), L = path.getTotalLength(), pts = [];
+      for (let t = 0; t <= L; t += 3) { const q = path.getPointAtLength(t); pts.push([q.x, q.y]); }
+      let diag = 0; for (let i = 1; i < pts.length; i++) { const dx = Math.abs(pts[i][0] - pts[i - 1][0]), dy = Math.abs(pts[i][1] - pts[i - 1][1]); if (dx > .6 && dy > .6) diag++; }
+      const b = LADDER.bench, mods = [...b.partsEl.querySelectorAll('.bn-part .module')].map(m => { const r = m.getBoundingClientRect(), s = b.stage.getBoundingClientRect(); return [(r.left - s.left) / b.scale, (r.top - s.top) / b.scale, (r.right - s.left) / b.scale, (r.bottom - s.top) / b.scale]; });
+      const inside = pts.filter((q, i) => i * 3 > skip && (L - i * 3) > skip && mods.some(m => q[0] > m[0] + 2 && q[0] < m[2] - 2 && q[1] > m[1] + 2 && q[1] < m[3] - 2)).length;
+      const ys = pts.map(q => q[1]); return { n: pts.length, diag, diagFrac: diag / pts.length, inside, span: Math.max(...ys) - Math.min(...ys), L: Math.round(L) };
+    }, sel, skip);
+    const rub = await geo('#bench .bn-wires .rubber', 30);
+    await p.mouse.up(); await sleep(60);
+    const w34 = await ev(p, (a, z) => (LADDER.bench.wires.find(w => (w.a.p === a && w.b.p === z) || (w.a.p === z && w.b.p === a)) || {}).id, fc[3], fc[4]);
+    const fin = w34 ? await geo('#wire-' + w34, 4) : null;
+    const same = await geo('#wire-' + (await ev(p, (a, z) => LADDER.bench.wires.find(w => (w.a.p === a && w.b.p === z) || (w.a.p === z && w.b.p === a)).id, fc[0], fc[1])), 4);
+    const sum = await ev(p, () => LADDER.bench.W < 800 && LADDER.bench.mob);
+    ok('Step 9 at 390px: the bit 3 -> bit 4 carry runs orthogonally between the rows (no diagonal runs, never over a module), while dragging and once placed; same-row carries unchanged',
+      sum && fin && fin.span > 150 && fin.diagFrac < .12 && fin.inside === 0 && rub && rub.span > 150 && rub.diagFrac < .15 && rub.inside === 0 && same.span < 40,
+      JSON.stringify({ rub, fin, same })); }
+  await p.close();
+
+  // ---------- 12e. the parts drawer inside the bench ----------
+  p = await open('?unlock=all&step=5', { clear: true });
+  { const d0 = await ev(p, () => { const d = document.querySelector('#bench .bn-drawer'), t = document.querySelector('#tray'), pull = document.querySelector('#tray-pull');
+      return { inScene: !!d && d.closest('#bench') === document.querySelector('#bench'), trayInDrawer: !!t && d.contains(t), items: [...t.querySelectorAll('.tray-item')].map(e => e.id), pull: !!pull, exp: pull.getAttribute('aria-expanded'), aria: pull.getAttribute('aria-label'), open: d.dataset.open }; });
+    await p.click('#tray-pull'); await sleep(320);
+    const d1 = await ev(p, () => ({ exp: document.querySelector('#tray-pull').getAttribute('aria-expanded'), open: document.querySelector('#bench .bn-drawer').dataset.open, h: Math.round(document.querySelector('#bench .bn-drawer-box').getBoundingClientRect().height) }));
+    await p.click('#tray-pull'); await sleep(320);
+    const before = await ev(p, () => LADDER.bench.parts.length); await p.click('#tray-relay'); await sleep(30);
+    const placed = await ev(p, n => LADDER.bench.parts.length === n + 1, before);
+    // drag a placed part back onto the drawer: it returns to the tray
+    const rid = await ev(p, () => LADDER.bench.parts[LADDER.bench.parts.length - 1].id);
+    const pr = await ev(p, id => { const r = document.getElementById('part-' + id).getBoundingClientRect(); const d = document.querySelector('#bench .bn-drawer-slots').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2, d.left + d.width / 2, d.top + d.height / 2]; }, rid);
+    await p.mouse.move(pr[0], pr[1]); await p.mouse.down(); await p.mouse.move(pr[0] + 20, pr[1] + 20, { steps: 3 }); await p.mouse.move(pr[2], pr[3], { steps: 8 }); await p.mouse.up(); await sleep(60);
+    const back = await ev(p, id => !LADDER.bench.parts.some(x => x.id === id), rid);
+    ok('parts drawer: inside #bench with #tray and the #tray-* ids; #tray-pull closes and reopens it (aria-expanded); tapping a tray part still places it; dropping a part on the drawer returns it',
+      d0.inScene && d0.trayInDrawer && d0.items.join() === 'tray-pile,tray-knife,tray-relay,tray-lamp' && d0.pull && d0.exp === 'true' && d0.aria && d1.exp === 'false' && d1.open === 'false' && d1.h < 4 && placed && back,
+      JSON.stringify({ d0, d1, placed, back })); }
+  await p.close();
+
   // ---------- 12c. tooltips from docs/ladder-tooltips.json ----------
   { const TIPS = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs/ladder-tooltips.json'), 'utf8')); delete TIPS._format;
     p = await open('?unlock=all&step=5', { clear: true });
@@ -270,7 +315,7 @@ const TXT = require(path.join(ROOT, 'js/ladder/text.js')); const MD = TXT.parse(
     const t = await ev(p, (pl, lp, rl) => {
       const tt = id => { const e = document.getElementById(id); if (!e) return null; if (e instanceof SVGElement) { const c = e.querySelector(':scope > title'); return c ? c.textContent : null; } return e.getAttribute('title'); };
       const w = LADDER.bench.wires[0];
-      return { stat: ['sound-toggle', 'motion-toggle', 'reset-progress', 'reset-confirm', 'step-nav-5', 'hints-toggle', 'tray-relay', 'tray-lamp', 'bench-delete', 'bench-clear', 'bench-stage'].map(i => [i, tt(i)]),
+      return { stat: ['sound-toggle', 'motion-toggle', 'reset-progress', 'reset-confirm', 'step-nav-5', 'hints-toggle', 'tray-relay', 'tray-lamp', 'tray-pull', 'bench-delete', 'bench-clear', 'bench-stage'].map(i => [i, tt(i)]),
         dyn: [['part-' + rl, tt('part-' + rl)], ['term-' + pl + '-pos', tt('term-' + pl + '-pos')], ['term-' + pl + '-neg', tt('term-' + pl + '-neg')], ['term-' + rl + '-com', tt('term-' + rl + '-com')], ['wire-' + w.id, tt('wire-' + w.id)]],
         aria: document.getElementById('term-' + pl + '-pos').getAttribute('aria-label'), sel: LADDER.tipFor('term-' + pl + '-pos') };
     }, pl, lp, rl);
@@ -287,7 +332,7 @@ const TXT = require(path.join(ROOT, 'js/ladder/text.js')); const MD = TXT.parse(
     await ev(p, () => LADDER.go(5)); await sleep(80);
     const t5 = await ev(p, () => [document.querySelector('#bench').getAttribute('title'), LADDER.tipFor('bench', 1), LADDER.tipFor('bench', 7), LADDER.tipFor('bench', 3), LADDER.tipFor('_format'), LADDER.tipFor('bench@step1', 2)]);
     await p.close();
-    ok('tooltips: #bench@step1 / #bench@step7 win on steps 1 and 7, plain #bench elsewhere; _format never used. Joseph\'s text as title on static controls, parts, terminals (pattern specificity: -pos/-neg beat *-*), SVG <title> on wires; aria-labels kept',
+    ok('tooltips: #tray-pull has Joseph\'s drawer text; #bench@step1 / #bench@step7 win on steps 1 and 7, plain #bench elsewhere; _format never used. Joseph\'s text as title on static controls, parts, terminals (pattern specificity: -pos/-neg beat *-*), SVG <title> on wires; aria-labels kept',
       statOk && dynOk && t8.every(([i, v]) => v === TIPS['#' + i]) && t1[0] === TIPS['#tray-cell'] && t1[1] === TIPS['#pile-cell-*'] && t1[2] === TIPS['#bench@step1'] &&
       t7[0] === TIPS['#bench@step7'] && t7[1] === TIPS['#bin-bit-0'] && t5[0] === TIPS['#bench'] && t5[1] === TIPS['#bench@step1'] && t5[2] === TIPS['#bench@step7'] && t5[3] === TIPS['#bench'] && !t5[4] && !t5[5] &&
       TIPS['#bench@step1'] !== TIPS['#bench'] && TIPS['#bench@step7'] !== TIPS['#bench'] && /\S/.test(t.aria || '') && t.sel === TIPS['#term-*-pos'],
@@ -329,6 +374,22 @@ const TXT = require(path.join(ROOT, 'js/ladder/text.js')); const MD = TXT.parse(
   await p.reload({ waitUntil: 'networkidle0' }); await p.waitForFunction('window.LADDER&&LADDER.ready');
   ok('bench layout is saved per step and restored on reload', await ev(p, () => LADDER.step === 2 && LADDER.bench.parts.length === 1 && LADDER.bench.parts[0].kind === 'pile'));
   await p.close();
+
+  // ---------- 4b. Step 1: the voltmeter follows the pile ----------
+  for (const reduce of [false, true]) {
+    p = await open('?unlock=all&step=1', { clear: true, reduce });
+    const meterAt = () => ev(p, () => { const svg = document.querySelector('#pile-meter svg'), nd = svg.querySelector('.needle'), m = new DOMMatrix(getComputedStyle(nd).transform);
+      return { volts: +document.querySelector('#pile-volts').dataset.value, mv: +svg.dataset.volts, set: +svg.dataset.angle, shown: Math.round(Math.atan2(m.b, m.a) * 180 / Math.PI * 10) / 10, over: svg.classList.contains('over'), want: BENCH.meterAngle(Math.max(0, +document.querySelector('#pile-volts').dataset.value)) }; });
+    const seq = [];
+    const settle = () => sleep(reduce ? 60 : 900);
+    for (const act of ['#tray-cell', '#tray-cell', '#tray-cell', '#pile-cell-2', '#tray-cell', '#tray-cell', '#tray-cell', '#pile-cell-2', '#pile-remove']) { await p.click(act); await settle(); seq.push(await meterAt()); }
+    let mid = null;
+    if (!reduce) { await p.click('#pile-remove'); await sleep(140); mid = await meterAt(); await settle(); seq.push(await meterAt()); }
+    const good = seq.every(m => m.mv === Math.max(0, m.volts) && Math.abs(m.set - m.want) < .01 && Math.abs(m.shown - m.want) < .6 && m.over === (m.volts > 6));
+    ok(`Step 1 voltmeter${reduce ? ' (reduced motion: needle jumps)' : ' (damped swing)'}: the needle settles at the pile voltage after every add, flip and remove (−60° = 0 V … +60° = 6 V)` + (reduce ? '' : '; mid-swing it is still moving'),
+      good && seq.map(m => m.volts).join(',') === '1,2,3,1,2,3,4,6,5' + (reduce ? '' : ',4') && (reduce || Math.abs(mid.shown - mid.want) > .5), JSON.stringify({ seq: seq.map(m => [m.volts, m.set, m.shown]), mid }));
+    await p.close();
+  }
 
   // ---------- 15. mobile (390x844, touch): tap-to-place, tap-to-wire, layout ----------
   p = await open('?unlock=all&step=2', { mobile: true, clear: true });

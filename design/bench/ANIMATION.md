@@ -13,6 +13,8 @@ Every animation is real code in `bench.js` (WAAPI) or `bench.css` (transitions).
 | Spark | `BENCH.spark(g)` | WAAPI 160 ms | `.flash` scales .3 → 1.2 → 1.5 and fades; `.star` scales up, turns 28° and is gone by 85%. The group is only visible while the animation runs, so nothing lingers if it is interrupted | hidden (`display:none`) |
 | Screw tightening | `BENCH.tighten(screwG)` | WAAPI 480 ms, `cubic-bezier(.3,.6,.2,1)` | `.slot` 0 → 270° about the screw centre; the copper loop slides in 6px and settles under the head; the head dips (scale .94 at 85%) as it seats | slot set to 270° and loop drawn, plus flash |
 | Step solved: burst | `BENCH.burst(container, x, y)` | 600–900 ms | warm core, 14 brass rays, 10 falling sparks | no burst; the container flashes |
+| Voltmeter needle | `BENCH.meter(el, volts)` | WAAPI 650 ms | `.needle` about (70,76): `from → to+ov @.48 → to−.32·ov @.74 → to+.08·ov @.9 → to`, with ov = 14% of the swing (max 9°). This is a damped moving-coil swing, clamped to the ±64° stop pins. Do **not** put a CSS transition on `.needle`: transitions win over animations in the cascade | needle set at once, plus flash |
+| Parts drawer | `BENCH.drawer(el, open)` | CSS 260 ms on `.bn-drawer-box` max-height and opacity | the box slides into or out of the front panel | instant, plus flash |
 | Current flow on a live wire | class `.on.flow` on `g.cw` | CSS `cwflow` 600 ms linear infinite | dashes travel along the path direction | flow layer hidden; the steady amber overlay stays |
 
 ## Snippets

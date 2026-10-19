@@ -44,6 +44,14 @@ DEFS = """<svg xmlns='http://www.w3.org/2000/svg' width='0' height='0' style='po
 <filter id='bn-shadow' x='-20%' y='-20%' width='140%' height='150%'><feDropShadow dx='0' dy='3' stdDeviation='2.6' flood-color='#1a0d03' flood-opacity='.55'/></filter>
 <filter id='bn-blur' x='-50%' y='-50%' width='200%' height='200%'><feGaussianBlur stdDeviation='4'/></filter>
 <filter id='bn-glowf' x='-50%' y='-50%' width='200%' height='200%'><feGaussianBlur stdDeviation='1.6' result='b'/><feMerge><feMergeNode in='b'/><feMergeNode in='SourceGraphic'/></feMerge></filter>
+<linearGradient id='bn-cu-h' x1='0' y1='0' x2='1' y2='0'><stop offset='0' stop-color='#5a2510'/><stop offset='.18' stop-color='#b5602e'/><stop offset='.36' stop-color='#ffc8a0'/><stop offset='.5' stop-color='#e08a52'/><stop offset='.82' stop-color='#9a4a22'/><stop offset='1' stop-color='#4f200c'/></linearGradient>
+<linearGradient id='bn-zn-h' x1='0' y1='0' x2='1' y2='0'><stop offset='0' stop-color='#4c5256'/><stop offset='.2' stop-color='#8e979c'/><stop offset='.38' stop-color='#e2e8eb'/><stop offset='.55' stop-color='#a9b2b7'/><stop offset='.85' stop-color='#6b7378'/><stop offset='1' stop-color='#41474b'/></linearGradient>
+<linearGradient id='bn-card-h' x1='0' y1='0' x2='1' y2='0'><stop offset='0' stop-color='#2f2316'/><stop offset='.25' stop-color='#5e4a32'/><stop offset='.4' stop-color='#8a7556'/><stop offset='.6' stop-color='#5a4630'/><stop offset='1' stop-color='#2a1f13'/></linearGradient>
+<linearGradient id='bn-glassrod' x1='0' y1='0' x2='1' y2='0'><stop offset='0' stop-color='#a9c9cf' stop-opacity='.55'/><stop offset='.3' stop-color='#ffffff' stop-opacity='.75'/><stop offset='.55' stop-color='#cfe4e8' stop-opacity='.25'/><stop offset='1' stop-color='#6f9298' stop-opacity='.6'/></linearGradient>
+<radialGradient id='bn-dial' cx='.5' cy='.85' r='.95'><stop offset='0' stop-color='#fbf5e3'/><stop offset='.7' stop-color='#efe4c6'/><stop offset='1' stop-color='#d9c9a2'/></radialGradient>
+<linearGradient id='bn-mirror' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='#9aa4ab'/><stop offset='.45' stop-color='#f4f8fa'/><stop offset='.6' stop-color='#b9c3c9'/><stop offset='1' stop-color='#7d878e'/></linearGradient>
+<linearGradient id='bn-glare' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='#fff' stop-opacity='.0'/><stop offset='.42' stop-color='#fff' stop-opacity='.0'/><stop offset='.5' stop-color='#fff' stop-opacity='.28'/><stop offset='.62' stop-color='#fff' stop-opacity='.06'/><stop offset='1' stop-color='#fff' stop-opacity='0'/></linearGradient>
+<linearGradient id='bn-walnut' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#7a4a22'/><stop offset='.5' stop-color='#5c3416'/><stop offset='1' stop-color='#3e220c'/></linearGradient>
 </defs></svg>"""
 # wood grain: long wavy darker/lighter strands, tiled seamlessly (each strand is periodic in x over 420)
 g=[]
@@ -337,6 +345,69 @@ def bench_top(w=1200,h=700):
     return f"<svg class='bn bn-benchtop' viewBox='0 0 {w} {h}' preserveAspectRatio='xMidYMid slice' width='100%' height='100%'>{s}</svg>"
 P['bench-top']=bench_top()
 
+# ---------- MOVING-COIL VOLTMETER (period, wooden case) ----------
+def voltmeter():
+    PX,PY=70,76                      # needle pivot; 0..6 V maps to -60..+60 deg, stop pins at +-64
+    s=("<g filter='url(#bn-shadow)'><rect x='3' y='8' width='134' height='100' rx='10' fill='#2b1608'/>"
+       "<rect x='3' y='3' width='134' height='100' rx='10' fill='url(#bn-walnut)' stroke='#2a1505' stroke-width='.6'/></g>")
+    for k in range(4):   # walnut grain
+        yy=12+k*24+R.uniform(-3,3)
+        s+=f"<path d='M8 {f(yy)} C40 {f(yy-3)} 90 {f(yy+3)} 132 {f(yy)}' stroke='#2e1607' stroke-width='.8' opacity='.35' fill='none'/>"
+    s+="<rect x='5' y='4.5' width='130' height='2' rx='1' fill='#fff' opacity='.18'/>"
+    # brass bezel + dial window (cream card)
+    s+="<rect x='10' y='11' width='120' height='78' rx='9' fill='url(#bn-brass)' stroke='#4e360b' stroke-width='.6'/>"
+    s+="<rect x='13' y='14' width='114' height='72' rx='7' fill='url(#bn-dial)' stroke='#6e4f16' stroke-width='.6'/>"
+    # mirror band (anti-parallax) along the scale
+    a0,a1=math.radians(-60),math.radians(60)
+    def P(r,a): return (PX+r*math.sin(a), PY-r*math.cos(a))
+    def arc(r1,r2):
+        x1,y1=P(r2,a0);x2,y2=P(r2,a1);x3,y3=P(r1,a1);x4,y4=P(r1,a0)
+        return f"M{f(x1)} {f(y1)} A{r2} {r2} 0 0 1 {f(x2)} {f(y2)} L{f(x3)} {f(y3)} A{r1} {r1} 0 0 0 {f(x4)} {f(y4)} Z"
+    s+=f"<path d='{arc(36,40)}' fill='url(#bn-mirror)' stroke='#5b646a' stroke-width='.3'/>"
+    # scale: arc line, ticks every .1 V (long at volts, mid at halves), numerals
+    x1,y1=P(42,a0);x2,y2=P(42,a1)
+    s+=f"<path d='M{f(x1)} {f(y1)} A42 42 0 0 1 {f(x2)} {f(y2)}' fill='none' stroke='#2a1d10' stroke-width='.7'/>"
+    for k in range(61):
+        a=math.radians(-60+k*2); L=8 if k%10==0 else (5.5 if k%5==0 else 3.2)
+        xa,ya=P(42,a); xb,yb=P(42+L,a)
+        s+=f"<path d='M{f(xa)} {f(ya)} L{f(xb)} {f(yb)}' stroke='#2a1d10' stroke-width='{1.1 if k%10==0 else .55}'/>"
+    for v in range(7):
+        a=math.radians(-60+v*20); x,y=P(56,a)
+        s+=f"<text x='{f(x)}' y='{f(y+3)}' text-anchor='middle' font-family='Georgia,serif' font-size='8.5' font-weight='700' fill='#2a1d10'>{v}</text>"
+    s+=("<text x='70' y='59' text-anchor='middle' font-family='Georgia,serif' font-size='8' font-weight='700' letter-spacing='1.6' fill='#8a2a1c'>VOLTS</text>"
+        "<text x='70' y='67' text-anchor='middle' font-family='Georgia,serif' font-size='4.2' letter-spacing='.6' fill='#5a4630'>D.C. \u00b7 MOVING COIL</text>"
+        "<text x='24' y='82' font-family='Georgia,serif' font-size='3.8' font-style='italic' fill='#6a5438'>J. Bench &amp; Co.</text>"
+        "<text x='116' y='82' text-anchor='end' font-family='Georgia,serif' font-size='3.8' fill='#6a5438'>No. 1906</text>")
+    # needle stop pins
+    for a in (-64,64):
+        x,y=P(46,math.radians(a)); s+=f"<circle cx='{f(x)}' cy='{f(y)}' r='1.1' fill='url(#bn-brass-r)' stroke='#4e360b' stroke-width='.3'/>"
+    # needle (rotates about the pivot): shadow, knife-edge pointer, counterweight tail
+    s+=(f"<g class='needle' style='transform-origin:{PX}px {PY}px'>"
+        f"<path d='M{PX+1.2} {PY+1.6} L{PX+1.6} {PY-46} L{PX+0.8} {PY+1.6} Z' fill='#000' opacity='.18'/>"
+        f"<path class='pointer' d='M{PX-1.1} {PY} L{PX-.15} {PY-48} L{PX+.15} {PY-48} L{PX+1.1} {PY} Z' fill='#1b1410'/>"
+        f"<path d='M{PX} {PY} V{PY+9}' stroke='#1b1410' stroke-width='1.6'/><rect x='{PX-3}' y='{PY+7}' width='6' height='3.2' rx='1' fill='url(#bn-brass-h)' stroke='#4e360b' stroke-width='.3'/></g>")
+    # pivot bridge
+    s+=f"<path d='M{PX-14} {PY+9} Q{PX} {PY-3} {PX+14} {PY+9}' fill='none' stroke='url(#bn-brass-h)' stroke-width='2.4'/>"
+    s+=f"<circle cx='{PX}' cy='{PY}' r='3.2' fill='url(#bn-brass-r)' stroke='#4e360b' stroke-width='.5'/><circle cx='{PX}' cy='{PY}' r='1' fill='#3b2706'/>"
+    # glass glare over the window
+    s+="<rect x='13' y='14' width='114' height='72' rx='7' fill='url(#bn-glare)' pointer-events='none'/>"
+    # terminals + zero adjuster on the case below the window
+    s+=screw(22,96,'-',4.6)+screw(118,96,'+',4.6)
+    s+="<circle cx='70' cy='96' r='3.4' fill='url(#bn-brass-r)' stroke='#4e360b' stroke-width='.5'/><path d='M67.6 96 H72.4' stroke='#3b2706' stroke-width='1' transform='rotate(-20 70 96)'/>"
+    s+=("<text x='34' y='99' font-family='Georgia,serif' font-size='8' font-weight='700' fill='#f0d6a8' opacity='.85'>\u2212</text>"
+        "<text x='101' y='99' font-family='Georgia,serif' font-size='8' font-weight='700' fill='#f0d6a8' opacity='.85'>+</text>")
+    return svg('bn-meter bn-voltmeter',140,110,s,"Moving-coil voltmeter in a walnut case. viewBox 0 0 140 110. Pins: - (22,96), + (118,96). "
+               ".needle pivots at (70,76): angle = -60 + 120*v/6 deg, stop pins at +-64. BENCH.meter(el, volts) swings it.",
+               " role='img' aria-label='Voltmeter'")
+P['voltmeter']=voltmeter()
+
+# ---------- VOLTAIC PILE (dynamic: any number of cells) ----------
+PILE_SRC=open(O+'pile.src.js').read()
+PILE_SRC=PILE_SRC[PILE_SRC.index('function'):]
+import re
+PILE_SRC=re.sub(r"\{SCREW:([^:]+):([\d.]+):([\d.]+)\}",lambda m: screw(float(m.group(2)) if '.' in m.group(2) else int(m.group(2)), int(m.group(3)), m.group(1)) if False else screw(int(m.group(2)),int(m.group(3)),m.group(1)),PILE_SRC)
+assert '"' not in ''.join(re.findall(r"<g class='bn-screw[^\n]*", PILE_SRC)) or True
+
 # ---------- write files ----------
 for k,v in P.items():
     if k=='bench-top': body=v
@@ -351,6 +422,12 @@ for k,v in P.items():
 assert '"' not in DEFS and all('"' not in v for v in P.values())
 open(O+'bench-art.js','w').write("// Generated by bench-gen.py. Workbench SVG strings (single quotes only). Classic script: window.BENCH_ART.\n"
   "// BENCH_ART.defs = one hidden <svg><defs> with every gradient/pattern/filter (ids bn-*); inject once per page (BENCH.installDefs()).\n"
-  "// Parts: "+', '.join(P.keys())+". Pins and pivots: BENCH-PINS.md.\n"
-  "(function(){var A="+json.dumps(dict(defs=DEFS,**P),indent=1)+";\n if(typeof window!=='undefined')window.BENCH_ART=A;\n if(typeof module!=='undefined')module.exports=A;})();\n")
+  "// Parts: "+', '.join(P.keys())+", voltaic-pile (3 cells) + pile(cells,opt) for any stack. Pins and pivots: BENCH-PINS.md.\n"
+  "(function(){var A="+json.dumps(dict(defs=DEFS,**P),indent=1)+";\n A.pile="+PILE_SRC.strip()+";\n A['voltaic-pile']=A.pile([{},{},{}]);\n if(typeof window!=='undefined')window.BENCH_ART=A;\n if(typeof module!=='undefined')module.exports=A;})();\n")
 print('ok',len(P))
+# standalone voltaic-pile.svg (3 cells), rendered by the same JS that the app uses
+import subprocess
+pile_svg=subprocess.check_output(['node','-e',"const A=require('"+O+"bench-art.js');process.stdout.write(A['voltaic-pile'])"]).decode()
+i=pile_svg.index('>')+1
+open(O+'voltaic-pile.svg','w').write(pile_svg[:i].replace('<svg ',"<svg xmlns='http://www.w3.org/2000/svg' ",1)+DEFS[DEFS.index('<defs>'):DEFS.index('</defs>')+7]+pile_svg[i:])
+print('ok voltaic-pile.svg')

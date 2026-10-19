@@ -24,6 +24,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   let p = await open('?unlock=all&step=5'); await relayScene(p); await p.screenshot({ path: O + 'ladder-step5-relay-1280.png', fullPage: true }); await p.close();
   p = await open('?unlock=all&step=5', true); await relayScene(p); await p.screenshot({ path: O + 'ladder-step5-relay-390.png', fullPage: true }); await p.close();
   p = await open('?step=1'); for (let i = 0; i < 3; i++) await p.click('#tray-cell'); await sleep(900); await p.screenshot({ path: O + 'ladder-step1-pile-1280.png', fullPage: true }); await p.close();
+  p = await open('?step=1', true); for (let i = 0; i < 3; i++) await p.tap('#tray-cell'); await sleep(900); await p.screenshot({ path: O + 'ladder-step1-pile-390.png', fullPage: true }); await p.close();
   // Step 9 with 13 + 29 wired up
   async function nine(p) {
     await p.evaluate(async () => { const b = LADDER.bench; const fa = []; for (let i = 0; i < 8; i++) fa.push(b.place('FULL'));

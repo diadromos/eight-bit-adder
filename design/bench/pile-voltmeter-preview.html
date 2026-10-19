@@ -1,0 +1,48 @@
+<!doctype html><meta charset="utf-8"><title>Voltaic pile + voltmeter</title>
+<link rel="stylesheet" href="../style.css"><link rel="stylesheet" href="bench.css">
+<style>
+body{max-width:none;padding:18px;background:#15110d}
+h1{color:#f1e6cc;font-family:var(--bn-serif);letter-spacing:.04em;margin:0 0 4px}
+p.sub{margin:0 0 14px;font:13px var(--mono);color:#cdb88f}
+.bn-scene{padding:18px;display:grid;grid-template-columns:repeat(2,1fr);gap:16px;min-height:0}
+.cell{background:rgba(30,16,6,.28);border-radius:14px;padding:10px;box-shadow:inset 0 0 0 1px rgba(255,220,170,.12)}
+.cell h4{margin:0 0 6px;font:700 12px var(--bn-serif);letter-spacing:.08em;text-transform:uppercase;color:#f4e2bf;text-shadow:0 1px 0 #2a1505}
+.row{display:flex;gap:14px;align-items:flex-end;justify-content:space-around;flex-wrap:wrap}
+.st{display:flex;flex-direction:column;align-items:center;gap:4px;font:700 10px var(--mono);color:#f1dcb6}
+.full{grid-column:1/-1}
+</style>
+<h1>Step 1 parts — voltaic pile + moving-coil voltmeter</h1>
+<p class="sub">BENCH.pile(cells,{cls}) · BENCH_ART.voltmeter · BENCH.meter(el, volts). Frames below are the real WAAPI swing paused at the time shown.</p>
+<div class="bn-scene" id="b"></div>
+<script src="bench-art.js"></script><script src="bench.js"></script>
+<script>
+BENCH.installDefs();
+const b=document.getElementById('b'); b.insertAdjacentHTML('afterbegin',BENCH.benchTop());
+const cell=(t,html,cls='')=>{b.insertAdjacentHTML('beforeend',`<div class="cell ${cls}"><h4>${t}</h4><div class="row">${html}</div></div>`);return b.lastElementChild;};
+const st=(lab,svg)=>`<div class="st">${svg}<span>${lab}</span></div>`;
+const sz=(svg,w)=>svg.replace('<svg ',`<svg style='width:${w}px;height:auto' `);
+const C=(n,flips=[])=>[...Array(n)].map((_,i)=>({flip:flips.includes(i)}));
+cell('Voltaic pile — any number of cells (copper · brine-soaked card · zinc)',
+  st('empty frame',sz(BENCH.pile([]),110))+st('tray: 1 cell (.one)',sz(BENCH.pile(C(1),{cls:'one'}),80))+st('2 cells',sz(BENCH.pile(C(2)),110))+
+  st('3 cells · 3 V',sz(BENCH.pile(C(3)),110))+st('4 cells, #2 flipped',sz(BENCH.pile(C(4,[1])),110))+st('6 cells · .on',sz(BENCH.pile(C(6),{cls:'on'}),110)),'full');
+cell('Voltmeter — 0 / 1.5 / 3 / 6 V and over-range (needle on the stop pin)',
+  [0,1.5,3,6,8].map(v=>st(v+' V'+(v>6?' (.over)':''),`<div class="m" data-v="${v}">${sz(BENCH_ART.voltmeter,170)}</div>`)).join(''),'full');
+document.querySelectorAll('.m').forEach(d=>{const s=d.querySelector('svg'),v=+d.dataset.v;document.documentElement.classList.add('bn-reduce');BENCH.meter(s,v);document.documentElement.classList.remove('bn-reduce');s.classList.remove('bn-flash');if(v>6)s.classList.add('over');});
+// needle swing frames 0 -> 3 V
+const NST=window.setTimeout.bind(window);
+const fr=cell('Needle swing 0 → 3 V (650 ms, damped: overshoot ≈14%, one small return) — and the reduced-motion version',
+  [0,120,240,312,400,480,560,650].map(t=>st(t+' ms',`<div class="sw" data-t="${t}">${sz(BENCH_ART.voltmeter,128)}</div>`)).join('')+st('reduced motion · 100 ms',`<div class="rm">${sz(BENCH_ART.voltmeter,128)}</div>`),'full');
+fr.querySelectorAll('.sw').forEach(d=>{const s=d.querySelector('svg');BENCH.meter(s,3);s.querySelector('.needle').getAnimations().forEach(a=>{a.pause();a.currentTime=+d.dataset.t;});});
+{const s=fr.querySelector('.rm svg');document.documentElement.classList.add('bn-reduce');BENCH.meter(s,3);document.documentElement.classList.remove('bn-reduce');
+ s.getAnimations().forEach(a=>{a.pause();a.currentTime=100;});}
+// a small bench: pile wired to the meter with cloth wire
+const W=520,H=230;
+const pl=BENCH.place('voltaic-pile',60,20,1.25,"class='on'"), vm=BENCH.place('voltmeter',270,70,1.5);
+let sc=`<svg viewBox='0 0 ${W} ${H}' style='width:100%;max-width:640px;height:auto;overflow:visible'>${pl.svg}${vm.svg}`;
+sc+=BENCH.wire(...pl.pin('+'),...vm.pin('+'),{color:'red',cls:'on',sag:.1})+BENCH.wire(...pl.pin('-'),...vm.pin('-'),{color:'black',cls:'on',sag:.16});
+sc+='</svg>';
+cell('On the bench: 3 cells → 3 V',sc,'full');
+const scene=b.lastElementChild; const m=scene.querySelector('svg.bn-voltmeter');document.documentElement.classList.add('bn-reduce');BENCH.meter(m,3);document.documentElement.classList.remove('bn-reduce');m.classList.remove('bn-flash');
+scene.querySelectorAll('.bn-screw').forEach(g=>{if(g.closest('svg.bn-pile, svg.bn-voltmeter')){g.classList.add('tight','on');}});
+document.documentElement.dataset.ready=1;
+</script>

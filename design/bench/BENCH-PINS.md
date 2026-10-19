@@ -16,6 +16,8 @@ Pivots use `transform-origin` in viewBox px on the moving `<g>`, with the defaul
 | `magnet` | `bn bn-magnet` | 0 0 190 90 | a (22,58), b (128,58) | nail point (152,38); `.iron` rests at x=164 and travels `translateX(-12px)` (overshoot to −14); `.field` (dashed ellipses); `.coil` | `.on`; `BENCH.magnet(el,on)` |
 | `iron` | `bn bn-iron` | 0 0 36 30 | — | loose iron piece (tray / decoration) | — |
 | `relay` | `bn bn-relay` | 0 0 184 128 | c1 (18,107), c2 (40,107) coil; com (98,107); nc (134,107); no (166,107) | `.armature` pivots at **(92,22)**; energized = `rotate(-6.5deg)`, so the tip at x=134 lifts off NC (y≈26) onto the NO screw (y≈14). `.spring` (origin 118,80, stretches `scaleY(1.05)`). Sparks `.spark-no` (134,14) and `.spark-nc` (134,26). `.coil` glows when energized | `.energized`; `BENCH.relay(el,on)` |
+| `voltaic-pile` / `BENCH.pile(cells, {cls})` | `bn bn-pile` | 0 0 90 160 (cls `one`: cropped to 2 100 86 58) | − (16,147) from the bottom plate, + (74,147) from the top plate | one `g.cell[data-cell=i]` per cell, bottom to top (`.flipped` when copper is at the bottom). Each cell holds `.zn`, `.cloth.card` and `.cu` bands plus an invisible `.cell-box`, so `getBBox()` covers the whole cell. The stack spans x 20..70 and starts at y 129. Cell height = min(15, 90/n). `.frame` (glass rods, yoke, pressure screw) is hidden with `one` | `.on` (current flows: copper glows), `.short` (Tommy's flash), `.one` (single tray cell) |
+| `voltmeter` | `bn bn-meter bn-voltmeter` | 0 0 140 110 | − (22,96), + (118,96) | `.needle` pivots at **(70,76)**; angle = −60° + 120°·V/6, with stop pins at ±64°. `.pointer` is the knife-edge needle | `BENCH.meter(el, volts, {max:6})`, `.over` (red pointer) |
 | `terminal` | `bn bn-terminal` | 0 0 48 42 | t (24,26) | one `.bn-screw` on a porcelain block | see the screw row below |
 | `spark` | `bn bn-spark-solo` | 0 0 40 40 | centre (20,20) | `.bn-spark` > `.flash` + `.star` | `BENCH.spark(g)` |
 | `tray` | `bn bn-tray` | 0 0 360 118 | — | 4 felt compartments: x = 12 + i·85, y = 12, w = 77, h = 82; brass pull at the bottom | — |
@@ -50,3 +52,32 @@ Colours: `brown` (default), `red`, `green`, `black`, `cream`.
 Sag: the control point sits below the midpoint by `sag × length × 2`, scaled down for steep runs. `ctrl:[x,y]` overrides it to route round a part.
 
 States: `.on` = 1 (amber), none = 0 (plain cloth), `.x` / `.unknown` = not computed (desaturated, dotted). `BENCH.setWire(g, 1|0|null)`.
+
+## Routed wires (rows of modules)
+
+`BENCH.wire(x1,y1,x2,y2,{route:[[x,y],…]})` draws the cloth wire through the given corner points. Corners get rounded elbows (`r`, default 12). Level runs longer than 60 px sag by `droop` px per 100 px, default 4, capped at 10.
+
+`BENCH.route(pts,{r,droop})` returns just the path data.
+
+`BENCH.rowRoute(p, q, {gapY, outP, outQ, lead, minX, maxX})` returns the inner corner points for a wire that wraps from one row to the next:
+- it leaves each pin sideways by `lead` px (−1 for a pin on the left edge of its module, +1 for the right edge), so the vertical runs sit outside the module edges;
+- it then runs along `gapY`, the gap between the rows;
+- `minX`/`maxX` keep the vertical runs on the bench.
+
+## Parts drawer (inside the scene)
+
+```html
+<div class="bn-scene has-drawer">  <!-- BENCH.benchTop(), the stage, then: -->
+  <div class="bn-drawer" data-open="true">
+    <div class="bn-drawer-box"><div class="bn-drawer-slots" role="list"> …tray buttons… </div></div>
+    <div class="bn-drawer-front"><span class="bn-drawer-label">Parts</span><button class="bn-drawer-pull" aria-expanded="true"></button></div>
+  </div>
+</div>
+```
+
+`BENCH.drawerHtml({label, slotsId, pullId, pullLabel, open})` writes this markup, and `BENCH.drawer(el, open?)` toggles it.
+
+Layout:
+- `.has-drawer` reserves `--bn-drawer-h` (150px open, 44px closed) as content-box padding under the stage, so a script that sets the scene height for the stage keeps working.
+- Compartments are `--cw` wide (77px, or 71px under 420px) with `--cg` dividers; the felt floor always shows at least 4.
+- Any element placed in `.bn-drawer-slots` becomes a compartment. Absolute positions and inline `left` are overridden.

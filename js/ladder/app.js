@@ -185,11 +185,12 @@
   function step1(w) {
     const cells = (S.benches.pile1 && S.benches.pile1.cells) || (S.pile ? S.pile.map(c => Object.assign({}, c)) : []);
     w.innerHTML =
-      `<div class="bn-scene scene pile-scene" id="bench">${root.BENCH.benchTop()}<div class="pile-holder" id="pile-drop"><div class="pile-art" id="pile-art"></div><div class="pile-cells" id="pile-cells"></div></div>` +
-      `<div class="meter-box"><div id="pile-meter"></div><output class="volts" id="pile-volts"></output></div></div>` +
-      `<div class="bench-tools"><button class="btn bench-btn" id="pile-remove" type="button">${UI.pileRemove}</button><p class="bench-status" id="bench-status" aria-live="polite"></p></div>` +
-      `<div class="tray-wrap"><div class="tray-label">${UI.tray}</div><div class="tray" id="tray"><div class="tray-box">${root.BENCH_ART.tray}` +
-      `<button type="button" class="tray-item" id="tray-cell" style="left:12px"><span class="thumb">${root.ART.pile([{}], { cls: 'one' })}</span><span class="tname">${UI.parts.cell}</span></button></div></div></div>`;
+      `<div class="bn-scene scene pile-scene has-drawer" id="bench">${root.BENCH.benchTop()}<div class="pile-holder" id="pile-drop"><div class="pile-art" id="pile-art"></div><div class="pile-cells" id="pile-cells"></div></div>` +
+      `<div class="meter-box"><div id="pile-meter"></div><output class="volts" id="pile-volts"></output></div>` +
+      root.BENCH.drawerHtml({ label: UI.tray, slotsId: 'tray', pullId: 'tray-pull' }) + `</div>` +
+      `<div class="bench-tools"><button class="btn bench-btn" id="pile-remove" type="button">${UI.pileRemove}</button><p class="bench-status" id="bench-status" aria-live="polite"></p></div>`;
+    $('#tray').innerHTML = `<button type="button" class="tray-item" id="tray-cell" role="listitem"><span class="thumb">${root.ART.pile([{}], { cls: 'one' })}</span><span class="tname">${UI.parts.cell}</span></button>`;
+    $('#bench .bn-drawer-pull').addEventListener('click', e => root.BENCH.drawer(e.currentTarget.closest('.bn-drawer')));
     $('#pile-meter').innerHTML = root.ART.meter(0);
     const volts = () => cells.reduce((s, c) => s + (c.flip ? -1 : 1), 0);
     const draw = (why) => {
@@ -201,7 +202,7 @@
       }).join('');
       $$('#pile-cells .pile-cell').forEach((b, i) => b.addEventListener('click', () => { cells[i].flip = !cells[i].flip; SFX('binding-post-screw', { vol: .2 }); draw('flip'); }));
       const v = volts();
-      $('#pile-meter .needle').style.transform = `rotate(${Math.max(-62, Math.min(62, -60 + (v / 6) * 120))}deg)`;
+      root.BENCH.meter($('#pile-meter svg'), Math.max(0, v)); $('#pile-meter svg').classList.toggle('over', v > 6);
       $('#pile-volts').textContent = UI.pileVolts(v); $('#pile-volts').dataset.value = v;
       $('#pile-remove').disabled = !cells.length; $('#tray-cell').disabled = cells.length >= 6;
       $('#bench-status').textContent = v > TARGET_VOLTS ? UI.pileTooMuch : '';
@@ -220,7 +221,8 @@
         ghost.style.left = ev.clientX + 'px'; ghost.style.top = ev.clientY + 'px'; };
       const up = ev => { b.removeEventListener('pointermove', mv); b.removeEventListener('pointerup', up); b.removeEventListener('pointercancel', up);
         if (!ghost) return; ghost.remove(); run.noClick = true; setTimeout(() => { run.noClick = false; }, 0);
-        const r = $('#bench').getBoundingClientRect(); if (ev.type === 'pointerup' && ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom) add(); };
+        const r = $('#bench').getBoundingClientRect(), d = $('#bench .bn-drawer').getBoundingClientRect(), inside = (q, x, y) => x >= q.left && x <= q.right && y >= q.top && y <= q.bottom;
+        if (ev.type === 'pointerup' && inside(r, ev.clientX, ev.clientY) && !inside(d, ev.clientX, ev.clientY)) add(); };
       b.addEventListener('pointermove', mv); b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up);
     });
     draw('init');
@@ -481,8 +483,13 @@
       /* phone layout (two rows): a wire between the rows runs along the gap between them instead of cutting across the modules */
       wireRoute: (p, q, b) => {
         if (!b.mob || !b.slots[3] || !b.slots[4]) return null;
-        const top = b.slots[4].y + b.slots[4].h, bot = b.slots[3].y, mid = (top + bot) / 2;
-        return (Math.min(p.y, q.y) < top && Math.max(p.y, q.y) > bot) ? [[p.x, mid], [q.x, mid]] : null;
+        const top = b.slots[4].y + b.slots[4].h, bot = b.slots[3].y;
+        if (!(Math.min(p.y, q.y) < top && Math.max(p.y, q.y) > bot)) return null;
+        // leave each pin outwards (Cout faces left, Cin faces right), drop to the gap between the rows, run along it
+        const side = e => (e.el && e.el.closest('.mpins.out')) ? 1 : -1;
+        // while dragging, q is the bare pointer (no pin): assume it faces the other way from p (a Cout goes to a Cin), so the band doesn't cut into the target module
+        const sp = p.el ? side(p) : -side(q), sq = q.el ? side(q) : -sp;
+        return root.BENCH.rowRoute(p, q, { gapY: (top + bot) / 2, outP: sp, outQ: sq, lead: 16, minX: 6, maxX: b.W - 6 });
       },
       check: (b, why) => { if (why === 'move') b.renderAll(); evaluate(b, why); }
     });

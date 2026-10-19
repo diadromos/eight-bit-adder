@@ -1,0 +1,229 @@
+diff --git a/css/ladder.css b/css/ladder.css
+index 48b716b..481cb91 100644
+--- a/css/ladder.css
++++ b/css/ladder.css
+@@ -128,9 +128,6 @@ body.ladder-page{max-width:none;margin:0;padding:0;min-height:100vh;color:#f1dcb
+ .pile-cell[aria-pressed=true]{box-shadow:inset 0 0 0 2px #ff9a7a}
+ .meter-box{display:flex;flex-direction:column;align-items:center;gap:6px}
+ .meter-box svg{width:220px;height:auto}
+-.meter-box .needle{transition:transform 500ms cubic-bezier(.3,1.5,.5,1)}
+-@media (prefers-reduced-motion:reduce){.meter-box .needle{transition:none}}
+-.bn-reduce .meter-box .needle{transition:none}
+ .volts{font:800 26px var(--mono);color:var(--bn-amber);text-shadow:0 0 8px var(--bn-glow)}
+ /* step 4 */
+ .magnet-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+diff --git a/js/ladder/app.js b/js/ladder/app.js
+index 3f97b6f..e1cca04 100644
+--- a/js/ladder/app.js
++++ b/js/ladder/app.js
+@@ -185,11 +185,12 @@
+   function step1(w) {
+     const cells = (S.benches.pile1 && S.benches.pile1.cells) || (S.pile ? S.pile.map(c => Object.assign({}, c)) : []);
+     w.innerHTML =
+-      `<div class="bn-scene scene pile-scene" id="bench">${root.BENCH.benchTop()}<div class="pile-holder" id="pile-drop"><div class="pile-art" id="pile-art"></div><div class="pile-cells" id="pile-cells"></div></div>` +
+-      `<div class="meter-box"><div id="pile-meter"></div><output class="volts" id="pile-volts"></output></div></div>` +
+-      `<div class="bench-tools"><button class="btn bench-btn" id="pile-remove" type="button">${UI.pileRemove}</button><p class="bench-status" id="bench-status" aria-live="polite"></p></div>` +
+-      `<div class="tray-wrap"><div class="tray-label">${UI.tray}</div><div class="tray" id="tray"><div class="tray-box">${root.BENCH_ART.tray}` +
+-      `<button type="button" class="tray-item" id="tray-cell" style="left:12px"><span class="thumb">${root.ART.pile([{}], { cls: 'one' })}</span><span class="tname">${UI.parts.cell}</span></button></div></div></div>`;
++      `<div class="bn-scene scene pile-scene has-drawer" id="bench">${root.BENCH.benchTop()}<div class="pile-holder" id="pile-drop"><div class="pile-art" id="pile-art"></div><div class="pile-cells" id="pile-cells"></div></div>` +
++      `<div class="meter-box"><div id="pile-meter"></div><output class="volts" id="pile-volts"></output></div>` +
++      root.BENCH.drawerHtml({ label: UI.tray, slotsId: 'tray', pullId: 'tray-pull' }) + `</div>` +
++      `<div class="bench-tools"><button class="btn bench-btn" id="pile-remove" type="button">${UI.pileRemove}</button><p class="bench-status" id="bench-status" aria-live="polite"></p></div>`;
++    $('#tray').innerHTML = `<button type="button" class="tray-item" id="tray-cell" role="listitem"><span class="thumb">${root.ART.pile([{}], { cls: 'one' })}</span><span class="tname">${UI.parts.cell}</span></button>`;
++    $('#bench .bn-drawer-pull').addEventListener('click', e => root.BENCH.drawer(e.currentTarget.closest('.bn-drawer')));
+     $('#pile-meter').innerHTML = root.ART.meter(0);
+     const volts = () => cells.reduce((s, c) => s + (c.flip ? -1 : 1), 0);
+     const draw = (why) => {
+@@ -201,7 +202,7 @@
+       }).join('');
+       $$('#pile-cells .pile-cell').forEach((b, i) => b.addEventListener('click', () => { cells[i].flip = !cells[i].flip; SFX('binding-post-screw', { vol: .2 }); draw('flip'); }));
+       const v = volts();
+-      $('#pile-meter .needle').style.transform = `rotate(${Math.max(-62, Math.min(62, -60 + (v / 6) * 120))}deg)`;
++      root.BENCH.meter($('#pile-meter svg'), Math.max(0, v)); $('#pile-meter svg').classList.toggle('over', v > 6);
+       $('#pile-volts').textContent = UI.pileVolts(v); $('#pile-volts').dataset.value = v;
+       $('#pile-remove').disabled = !cells.length; $('#tray-cell').disabled = cells.length >= 6;
+       $('#bench-status').textContent = v > TARGET_VOLTS ? UI.pileTooMuch : '';
+@@ -220,7 +221,8 @@
+         ghost.style.left = ev.clientX + 'px'; ghost.style.top = ev.clientY + 'px'; };
+       const up = ev => { b.removeEventListener('pointermove', mv); b.removeEventListener('pointerup', up); b.removeEventListener('pointercancel', up);
+         if (!ghost) return; ghost.remove(); run.noClick = true; setTimeout(() => { run.noClick = false; }, 0);
+-        const r = $('#bench').getBoundingClientRect(); if (ev.type === 'pointerup' && ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom) add(); };
++        const r = $('#bench').getBoundingClientRect(), d = $('#bench .bn-drawer').getBoundingClientRect(), inside = (q, x, y) => x >= q.left && x <= q.right && y >= q.top && y <= q.bottom;
++        if (ev.type === 'pointerup' && inside(r, ev.clientX, ev.clientY) && !inside(d, ev.clientX, ev.clientY)) add(); };
+       b.addEventListener('pointermove', mv); b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up);
+     });
+     draw('init');
+@@ -481,8 +483,11 @@
+       /* phone layout (two rows): a wire between the rows runs along the gap between them instead of cutting across the modules */
+       wireRoute: (p, q, b) => {
+         if (!b.mob || !b.slots[3] || !b.slots[4]) return null;
+-        const top = b.slots[4].y + b.slots[4].h, bot = b.slots[3].y, mid = (top + bot) / 2;
+-        return (Math.min(p.y, q.y) < top && Math.max(p.y, q.y) > bot) ? [[p.x, mid], [q.x, mid]] : null;
++        const top = b.slots[4].y + b.slots[4].h, bot = b.slots[3].y;
++        if (!(Math.min(p.y, q.y) < top && Math.max(p.y, q.y) > bot)) return null;
++        // leave each pin outwards (Cout faces left, Cin faces right), drop to the gap between the rows, run along it
++        const side = e => (e.el && e.el.closest('.mpins.out')) ? 1 : -1;
++        return root.BENCH.rowRoute(p, q, { gapY: (top + bot) / 2, outP: side(p), outQ: side(q), lead: 16, minX: 6, maxX: b.W - 6 });
+       },
+       check: (b, why) => { if (why === 'move') b.renderAll(); evaluate(b, why); }
+     });
+diff --git a/js/ladder/art.js b/js/ladder/art.js
+index 36cd95f..141b24a 100644
+--- a/js/ladder/art.js
++++ b/js/ladder/art.js
+@@ -1,7 +1,6 @@
+ /* art.js: thin helpers around Henri's workbench art (design/bench/bench-art.js, window.BENCH_ART) and bench.css.
+    Defs, wires, sparks, bursts and the part animations come from his design/bench/bench.js (window.BENCH).
+-   Two pieces had no drawing in the kit and are assembled here from his gradients and binding screws:
+-   the voltaic pile (zinc / cloth / copper discs) and the voltmeter for Step 1. */
++   The voltaic pile and the voltmeter for Step 1 come from his kit too (BENCH.pile, BENCH_ART.voltmeter, BENCH.meter). */
+ (function (root) {
+   'use strict';
+   const A = () => root.BENCH_ART;
+@@ -13,50 +12,10 @@
+     if (!SCREW) { const m = A().terminal.match(/<g class='bn-screw '[\s\S]*<\/g>(?=<\/svg>)/); SCREW = m[0]; }
+     return `<g transform='translate(${cx - 24} ${cy - 26})'>` + SCREW.replace("data-pin='t'", `data-pin='${pin}'`) + '</g>';
+   }
+-  /* ---- the voltaic pile: cells = [{flip:bool}], bottom to top. viewBox 0 0 90 160, pins + (74,147) - (16,147) ---- */
+-  function pile(cells, opt) {
+-    opt = opt || {};
+-    const n = cells.length, top = 124, ch = n ? Math.min(15, 90 / n) : 15, dz = ch * 0.36, dc = ch * 0.26;
+-    let s = `<svg class='bn bn-pile${opt.cls ? ' ' + opt.cls : ''}' viewBox='0 0 90 160' width='90' height='160' overflow='visible'>`;
+-    s += "<g class='bn-base' filter='url(#bn-shadow)'><rect x='4' y='144' width='82' height='14' rx='6' fill='url(#bn-woodedge)'/><rect x='4' y='136' width='82' height='16' rx='6' fill='url(#bn-woodpiece)'/></g>";
+-    s += "<rect x='5.5' y='137' width='79' height='2' rx='1' fill='#fff' opacity='.22'/>";
+-    // two wooden guide rods
+-    const rodTop = Math.min(top - n * ch - 16, 100);
+-    s += `<rect x='12' y='${rodTop}' width='5' height='${138 - rodTop}' rx='2' fill='url(#bn-woodpiece)' stroke='#3a1f0a' stroke-width='.5'/>`;
+-    s += `<rect x='73' y='${rodTop}' width='5' height='${138 - rodTop}' rx='2' fill='url(#bn-woodpiece)' stroke='#3a1f0a' stroke-width='.5'/>`;
+-    s += `<rect x='16' y='${top}' width='58' height='7' rx='2' fill='url(#bn-brass)' stroke='#5a3f10' stroke-width='.5'/>`;   // bottom plate
+-    let y = top;
+-    const disc = (y, h, fill, cls, extra) => `<g class='${cls}'><rect x='20' y='${(y - h).toFixed(1)}' width='50' height='${h.toFixed(1)}' rx='${Math.min(2, h / 2).toFixed(1)}' fill='${fill}' stroke='rgba(0,0,0,.35)' stroke-width='.4'${extra || ''}/></g>`;
+-    cells.forEach((c, i) => {
+-      const layers = c.flip ? [['url(#bn-copper)', 'cu', dz], ['#7d6a4c', 'cloth', dc], ['url(#bn-zinc)', 'zn', dz]] : [['url(#bn-zinc)', 'zn', dz], ['#7d6a4c', 'cloth', dc], ['url(#bn-copper)', 'cu', dz]];
+-      s += `<g class='cell${c.flip ? ' flipped' : ''}' data-cell='${i}'>`;
+-      layers.forEach(([f, cl, h]) => { s += disc(y, h, f, cl); y -= h; });
+-      s += `<rect class='cell-gap' x='20' y='${(y - (ch - 2 * dz - dc)).toFixed(1)}' width='50' height='${(ch - 2 * dz - dc).toFixed(1)}' fill='none'/></g>`;
+-      y -= ch - 2 * dz - dc;
+-    });
+-    // brass top cap and the + lead down the right rod
+-    s += `<rect x='18' y='${(y - 6).toFixed(1)}' width='54' height='6' rx='2' fill='url(#bn-brass)' stroke='#5a3f10' stroke-width='.5'/>`;
+-    s += `<path d='M70 ${(y - 3).toFixed(1)} C82 ${(y - 3).toFixed(1)} 82 ${(y + 8).toFixed(1)} 81 ${Math.min(130, y + 30).toFixed(1)} S76 140 74 147' fill='none' stroke='url(#bn-coil)' stroke-width='2' stroke-linecap='round'/>`;
+-    s += `<path d='M18 ${top + 4} C10 ${top + 6} 14 140 16 147' fill='none' stroke='url(#bn-coil)' stroke-width='2' stroke-linecap='round'/>`;
+-    s += screw('-', 16, 147) + screw('+', 74, 147);
+-    s += "<text x='29' y='151' font-family='Georgia,serif' font-size='9' font-weight='700' fill='#f0d6a8'>−</text><text x='55' y='151' font-family='Georgia,serif' font-size='9' font-weight='700' fill='#f0d6a8'>+</text>";
+-    return s + '</svg>';
+-  }
+-  /* ---- a simple brass-rimmed voltmeter, 0..6 V ---- */
+-  function meter(v) {
+-    const ang = Math.max(-62, Math.min(62, -60 + (v / 6) * 120));
+-    let s = "<svg class='bn bn-meter' viewBox='0 0 140 110' width='140' height='110' role='img' aria-label='Voltmeter'>";
+-    s += "<g filter='url(#bn-shadow)'><rect x='4' y='10' width='132' height='96' rx='12' fill='url(#bn-woodedge)'/><rect x='4' y='4' width='132' height='96' rx='12' fill='url(#bn-woodpiece)'/></g>";
+-    s += "<circle cx='70' cy='78' r='60' fill='url(#bn-brass-r)' clip-path='inset(0 0 22px 0)'/>";
+-    s += "<path d='M16 76 A54 54 0 0 1 124 76 Z' fill='url(#bn-porcelain)' stroke='#6e4f16' stroke-width='2'/>";
+-    for (let k = 0; k <= 6; k++) { const a = (-60 + k * 20) * Math.PI / 180, x1 = 70 + 46 * Math.sin(a), y1 = 76 - 46 * Math.cos(a), x2 = 70 + 38 * Math.sin(a), y2 = 76 - 38 * Math.cos(a);
+-      s += `<path d='M${x1.toFixed(1)} ${y1.toFixed(1)} L${x2.toFixed(1)} ${y2.toFixed(1)}' stroke='#3b2a17' stroke-width='${k === 3 ? 2 : 1.2}'/>`;
+-      s += `<text x='${(70 + 31 * Math.sin(a)).toFixed(1)}' y='${(79 - 31 * Math.cos(a)).toFixed(1)}' text-anchor='middle' font-family='Georgia,serif' font-size='8' fill='#3b2a17'>${k}</text>`; }
+-    s += "<text x='70' y='62' text-anchor='middle' font-family='Georgia,serif' font-size='7' letter-spacing='1' fill='#7a2b1e'>VOLTS</text>";
+-    s += `<g class='needle' style='transform-origin:70px 76px;transform:rotate(${ang}deg)'><path d='M70 78 L70 26' stroke='#7a2b1e' stroke-width='1.6' stroke-linecap='round'/></g>`;
+-    s += "<circle cx='70' cy='76' r='4' fill='url(#bn-brass-r)' stroke='#4e360b' stroke-width='.6'/>";
+-    return s + '</svg>';
+-  }
++  /* the voltaic pile and the voltmeter are now in Henri's kit (design/bench: BENCH.pile, BENCH_ART.voltmeter, BENCH.meter).
++     Same contract as before: viewBox 0 0 90 160, pins - (16,147) + (74,147), g.cell[data-cell=i] per cell; the meter's .needle pivots at (70,76). */
++  const pile = (cells, opt) => root.BENCH.pile(cells, opt);
++  const meter = () => A().voltmeter;
+   const ART_KEY = { lamp: 'lamp', knife: 'knife-switch', magnet: 'magnet', relay: 'relay', IN: 'knife-switch', OUT: 'lamp' };
+   function partSvg(p) {
+     if (p.kind === 'pile') return pile(p.cells || [{}, {}, {}]);
+@@ -94,20 +53,9 @@
+   const spark = g => root.BENCH.spark(g);
+   const burst = (host, x, y) => root.BENCH.burst(host, x, y);
+   /* cloth-covered wire: Henri's BENCH.wire, plus an id and a wide invisible hit path so a wire can be picked */
+-  /* routed wire: straight runs through the given points with rounded elbows (r px), same cloth layers as BENCH.wire */
+-  function routePath(pts, r) {
+-    r = r || 12; const f = n => +n.toFixed(1);
+-    let d = `M${f(pts[0][0])} ${f(pts[0][1])}`;
+-    for (let i = 1; i < pts.length - 1; i++) {
+-      const [x0, y0] = pts[i - 1], [x1, y1] = pts[i], [x2, y2] = pts[i + 1];
+-      const l1 = Math.hypot(x1 - x0, y1 - y0) || 1, l2 = Math.hypot(x2 - x1, y2 - y1) || 1, k1 = Math.min(r, l1 / 2) / l1, k2 = Math.min(r, l2 / 2) / l2;
+-      d += ` L${f(x1 - (x1 - x0) * k1)} ${f(y1 - (y1 - y0) * k1)} Q${f(x1)} ${f(y1)} ${f(x1 + (x2 - x1) * k2)} ${f(y1 + (y2 - y1) * k2)}`;
+-    }
+-    const e = pts[pts.length - 1]; return d + ` L${f(e[0])} ${f(e[1])}`;
+-  }
++  /* routed wire: BENCH.wire({route}) draws straight runs with rounded elbows; level runs sag a little */
+   function wireSvg(id, p, q, color, route) {
+-    let g = root.BENCH.wire(+p.x.toFixed(1), +p.y.toFixed(1), +q.x.toFixed(1), +q.y.toFixed(1), { color: color || 'brown', sag: .1 });
+-    if (route && route.length) { const rd = routePath([[p.x, p.y]].concat(route, [[q.x, q.y]])); g = g.replace(/ d='[^']*'/g, ` d='${rd}'`); }
++    const g = root.BENCH.wire(+p.x.toFixed(1), +p.y.toFixed(1), +q.x.toFixed(1), +q.y.toFixed(1), { color: color || 'brown', sag: .1, route: route && route.length ? route : null });
+     const d = (g.match(/d='([^']+)'/) || [])[1];
+     return g.replace('<g ', `<g id='wire-${id}' data-wire='${id}' `).replace(/(<g [^>]*>)/, `$1<path class='cw-hit' d='${d}'/>`);
+   }
+diff --git a/js/ladder/bench.js b/js/ladder/bench.js
+index 59bd070..fc6daea 100644
+--- a/js/ladder/bench.js
++++ b/js/ladder/bench.js
+@@ -32,32 +32,30 @@
+   P.build = function () {
+     const cfg = this.cfg;
+     this.host.innerHTML =
+-      `<div class="bench-wrap" data-mode="${this.mode}"><div class="bn-scene bench-scene" id="bench">${root.BENCH.benchTop()}` +
+-      `<div class="bench-stage" id="bench-stage" tabindex="-1"><div class="slots"></div><div class="parts"></div><svg class="bn-wires" aria-hidden="true"></svg><div class="terms"></div></div></div>` +
++      `<div class="bench-wrap" data-mode="${this.mode}"><div class="bn-scene bench-scene has-drawer" id="bench">${root.BENCH.benchTop()}` +
++      `<div class="bench-stage" id="bench-stage" tabindex="-1"><div class="slots"></div><div class="parts"></div><svg class="bn-wires" aria-hidden="true"></svg><div class="terms"></div></div>` +
++      root.BENCH.drawerHtml({ label: cfg.ui.tray, slotsId: 'tray', pullId: 'tray-pull' }) + `</div>` +
+       `<div class="bench-tools"><button class="btn bench-btn" id="bench-delete" type="button" disabled>${cfg.ui.remove}</button>` +
+-      `<button class="btn bench-btn" id="bench-clear" type="button">${cfg.ui.clear}</button><p class="bench-status" id="bench-status" aria-live="polite"></p></div>` +
+-      `<div class="tray-wrap"><div class="tray-label">${cfg.ui.tray}</div><div class="tray" id="tray" role="list"></div></div></div>`;
++      `<button class="btn bench-btn" id="bench-clear" type="button">${cfg.ui.clear}</button><p class="bench-status" id="bench-status" aria-live="polite"></p></div></div>`;
+     this.el = this.host.querySelector('#bench'); this.stage = this.host.querySelector('.bench-stage');
+     this.partsEl = this.stage.querySelector('.parts'); this.wiresEl = this.stage.querySelector('.bn-wires'); this.termsEl = this.stage.querySelector('.terms');
+     this.slotsEl = this.stage.querySelector('.slots'); this.trayEl = this.host.querySelector('#tray'); this.statusEl = this.host.querySelector('#bench-status');
+     this.host.querySelector('#bench-delete').addEventListener('click', () => this.deleteSelected());
+     this.host.querySelector('#bench-clear').addEventListener('click', () => this.clear());
++    this.drawerEl = this.host.querySelector('.bn-drawer');
++    this.drawerEl.querySelector('.bn-drawer-pull').addEventListener('click', () => root.BENCH.drawer(this.drawerEl));
+     this.buildTray();
+     this.bindStage();
+     this.ro = new ResizeObserver(() => this.layout()); this.ro.observe(this.el);
+   };
+   P.destroy = function () { if (this.ro) this.ro.disconnect(); if (root.SFX) root.SFX.hum(false); };
+   P.buildTray = function () {
+-    const items = this.cfg.tray, per = 4, trays = Math.max(1, Math.ceil(items.length / per));
++    // one felt compartment per part, in the drawer at the front edge of the bench (BENCH.drawerHtml)
+     let h = '';
+-    for (let t = 0; t < trays; t++) {
+-      h += `<div class="tray-box">${root.BENCH_ART.tray}`;
+-      items.slice(t * per, t * per + per).forEach((it, i) => {
+-        h += `<button type="button" class="tray-item" role="listitem" id="tray-${it.key}" data-key="${it.key}" style="left:${12 + i * 86}px">` +
+-          `<span class="thumb">${this.thumb(it)}</span><span class="tname">${it.name}</span><span class="tcount"></span></button>`;
+-      });
+-      h += '</div>';
+-    }
++    this.cfg.tray.forEach(it => {
++      h += `<button type="button" class="tray-item" role="listitem" id="tray-${it.key}" data-key="${it.key}">` +
++        `<span class="thumb">${this.thumb(it)}</span><span class="tname">${it.name}</span><span class="tcount"></span></button>`;
++    });
+     this.trayEl.innerHTML = h;
+     this.trayEl.querySelectorAll('.tray-item').forEach(b => {
+       b.addEventListener('click', () => { if (this.suppress) return; this.place(b.dataset.key); });
+@@ -260,8 +258,8 @@
+ 
+   /* ---------------- pointer + keyboard ---------------- */
+   P.toStage = function (e) { const r = this.stage.getBoundingClientRect(); return { x: (e.clientX - r.left) / this.scale, y: (e.clientY - r.top) / this.scale }; };
+-  P.overTray = function (e) { const r = this.host.querySelector('.tray-wrap').getBoundingClientRect(); return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom; };
+-  P.overStage = function (e) { const r = this.el.getBoundingClientRect(); return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom; };
++  P.overTray = function (e) { const r = this.drawerEl.getBoundingClientRect(); return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom; };
++  P.overStage = function (e) { const r = this.stage.getBoundingClientRect(); return !this.overTray(e) && e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom; };
+   P.slotAt = function (e) { const q = this.toStage(e); return this.slots.findIndex(s => q.x >= s.x && q.x <= s.x + s.w && q.y >= s.y && q.y <= s.y + s.h); };
+   P.noClick = function () { this.suppress = true; setTimeout(() => { this.suppress = false; }, 0); };
+   P.bindStage = function () {
+@@ -318,7 +316,8 @@
+       if (!moved && Math.hypot(ev.clientX - s0.x, ev.clientY - s0.y) < 8) return;
+       moved = true; const p = this.pt(a), q = this.toStage(ev);
+       if (!rub) { rub = document.createElementNS('http://www.w3.org/2000/svg', 'g'); rub.setAttribute('class', 'cw brown rubber'); this.wiresEl.appendChild(rub); }
+-      const d = ART().wirePath(p, q); rub.innerHTML = `<path class="cw-out" d="${d}"/><path class="cw-base" d="${d}"/><path class="cw-b1" d="${d}"/>`;
++      const rt = this.cfg.wireRoute && this.cfg.wireRoute(p, q, this), d = rt ? root.BENCH.route([[p.x, p.y]].concat(rt, [[q.x, q.y]])) : ART().wirePath(p, q);   // same route as the finished wire
++      rub.innerHTML = `<path class="cw-out" d="${d}"/><path class="cw-base" d="${d}"/><path class="cw-b1" d="${d}"/>`;
+       const over = document.elementFromPoint(ev.clientX, ev.clientY); this.termsEl.querySelectorAll('.term.target').forEach(t => t.classList.remove('target'));
+       const ot = over && over.closest && over.closest('.term'); if (ot && ot !== term) ot.classList.add('target');
+     };

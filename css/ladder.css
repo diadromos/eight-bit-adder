@@ -40,12 +40,7 @@ body.ladder-page{max-width:none;margin:0;padding:0;min-height:100vh;color:#f1dcb
 .goal-card .stepnav .btn{min-height:40px;font-size:13px}
 /* bench */
 .bench-wrap{display:flex;flex-direction:column;gap:10px}
-.tray-wrap{order:-1;display:flex;align-items:center;gap:12px}
-.tray-label{font:700 11px var(--bn-serif);letter-spacing:.14em;text-transform:uppercase;color:#cdb88f;writing-mode:vertical-rl;transform:rotate(180deg)}
-.tray{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 6px;max-width:100%;scrollbar-width:thin}
-.tray-box{position:relative;flex:0 0 360px;height:118px}
-.tray-box>svg{position:absolute;inset:0}
-.tray-item{position:absolute;top:12px;width:77px;height:82px;border:0;border-radius:5px;background:transparent;color:#f6e3bd;cursor:grab;padding:3px 2px 2px;
+.tray-item{border:0;border-radius:5px;background:transparent;color:#f6e3bd;cursor:grab;padding:3px 2px 2px;
   display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:1px;touch-action:pan-x}
 .tray-item:hover:not(:disabled){background:rgba(255,236,200,.08)}
 .tray-item:disabled{opacity:.35;cursor:default}
@@ -54,7 +49,6 @@ body.ladder-page{max-width:none;margin:0;padding:0;min-height:100vh;color:#f1dcb
 .tray-item .tname{font:700 10px/1.05 var(--bn-serif);text-align:center;letter-spacing:.03em;text-shadow:0 1px 1px #000}
 .tray-item .tcount{position:absolute;top:2px;right:4px;font:800 10px var(--mono);color:var(--bn-amber)}
 .mthumb{display:flex;justify-content:center;zoom:.4}
-.mthumb .module[data-kind=FULL],.mthumb .module[data-kind=HALF]{zoom:.74}
 .mthumb .module{min-width:0;pointer-events:none}
 .tray-ghost{position:fixed;z-index:1000;pointer-events:none;transform:translate(-50%,-50%) scale(1.3);opacity:.9;filter:drop-shadow(0 10px 10px rgba(0,0,0,.5))}
 .tray-ghost svg{max-width:80px;max-height:70px}
@@ -100,7 +94,7 @@ body.ladder-page{max-width:none;margin:0;padding:0;min-height:100vh;color:#f1dcb
 .bn-part .module.bench .micon{width:30px;height:20px}
 [data-step="9"] .bn-part .module.bench>.mtitle{white-space:normal;padding:6px 8px;font-size:11.5px;text-align:center;flex-direction:column;gap:2px}
 [data-step="9"] .bn-part .module.bench .micon{display:none}
-[data-step="9"] .bn-part .module.bench>.mtitle{margin:6px 2px;padding:5px 5px;letter-spacing:0;font-size:11px;text-transform:none;line-height:1.05}
+[data-step="9"] .bn-part .module.bench>.mtitle{margin:6px 2px;padding:9px 4px 5px;letter-spacing:0;font-size:11px;text-transform:none;line-height:1.05}
 [data-step="9"] .bn-part .module.bench .mpin>span{font-size:10px;padding-left:10px}
 [data-step="9"] .bn-part .module.bench .mpins.out .mpin>span{padding:0 10px 0 0}
 /* subtabs + truth table */
@@ -128,9 +122,6 @@ body.ladder-page{max-width:none;margin:0;padding:0;min-height:100vh;color:#f1dcb
 .pile-cell[aria-pressed=true]{box-shadow:inset 0 0 0 2px #ff9a7a}
 .meter-box{display:flex;flex-direction:column;align-items:center;gap:6px}
 .meter-box svg{width:220px;height:auto}
-.meter-box .needle{transition:transform 500ms cubic-bezier(.3,1.5,.5,1)}
-@media (prefers-reduced-motion:reduce){.meter-box .needle{transition:none}}
-.bn-reduce .meter-box .needle{transition:none}
 .volts{font:800 26px var(--mono);color:var(--bn-amber);text-shadow:0 0 8px var(--bn-glow)}
 /* step 4 */
 .magnet-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
@@ -173,8 +164,12 @@ body.ladder-page{max-width:none;margin:0;padding:0;min-height:100vh;color:#f1dcb
   .lad-intro{font-size:14px}
   .hdr .btn.tool{min-height:44px}
   .tt-panel{grid-template-columns:1fr}
-  .tray-label{display:none}
   .pile-scene{gap:16px;padding:16px 8px}
   .meter-box svg{width:170px}
 }
 [data-step="9"] .bn-part .module.bench{width:116px;grid-template-columns:auto minmax(0,1fr) auto}
+/* step 9: the plate is too narrow for side screws at 116px, so its two screws sit in the top corners, clear of the words */
+[data-step="9"] .bn-part .module.bench>.mtitle{background:
+  radial-gradient(circle at 5px 5px,#5b3f0e 0 1.4px,#f5dc96 1.8px 2.6px,transparent 3px),
+  radial-gradient(circle at calc(100% - 5px) 5px,#5b3f0e 0 1.4px,#f5dc96 1.8px 2.6px,transparent 3px),
+  linear-gradient(180deg,#f8e3a0,#d8b35a 45%,#b48a35 55%,#e9c66b)}

@@ -11,6 +11,9 @@
    Cloth wire
      BENCH.wirePath(x1,y1,x2,y2,sag)     quadratic path that sags (sag = fraction of length, default .12, downward)
      BENCH.wire(x1,y1,x2,y2,{sag,ctrl,color,net,cls})  ctrl=[x,y] overrides the sag to route round a part;  layered <g class='cw COLOR' data-w=NET> (cloth + braid + amber signal + flow)
+     BENCH.wire(...,{route:[[x,y],...]})  orthogonal run through the given corner points (rounded elbows, level runs sag)
+     BENCH.route(pts, {r, droop})        the path data for such a run; BENCH.rowRoute(p, q, {gapY, outP, outQ, lead, minX, maxX})
+                                         corner points that wrap a wire from one row of modules to the next along the gap
      BENCH.setWire(g, v)                 v = 1 | 0 | null(unknown); adds .on / .x
    States (el = the part's <svg>)
      BENCH.heat(el, v)                   lamp filament --heat 0..1 (CSS transition does the warming)
@@ -19,7 +22,11 @@
      BENCH.relay(el, on)                 armature swings, clicks with a small bounce, spark at the contact that closes
      BENCH.spark(g)                      play one spark group (.bn-spark), ~150 ms
      BENCH.tighten(screwG, {color})      screw slot turns 270 deg while a wire end snugs under the washer
+   Step 1
+     BENCH.pile(cells, {cls})            voltaic pile SVG for [{flip}, ...] (bottom to top); pins - (16,147), + (74,147)
+     BENCH.meter(el, volts, {max, ms})   swing the voltmeter needle (BENCH_ART.voltmeter); BENCH.meterAngle(v, max)
    Step furniture
+     BENCH.drawerHtml({label}) / BENCH.drawer(el, open)   the parts drawer pulled out at the front edge of a .bn-scene
      BENCH.burst(container, x, y)        brass-spark burst for a solved step
      BENCH.binaryRow(el, value)          build 8 carbon bulbs with engraved place values; BENCH.setBinary(el, value)
 */
@@ -57,7 +64,7 @@
     return `M${x1} ${y1} Q${cx.toFixed(1)} ${cy.toFixed(1)} ${x2} ${y2}`;
   }
   function wire(x1, y1, x2, y2, o) {
-    o = o || {}; const d = wirePath(x1, y1, x2, y2, o.sag, o.ctrl);
+    o = o || {}; const d = o.route ? route([[x1, y1]].concat(o.route, [[x2, y2]]), o) : wirePath(x1, y1, x2, y2, o.sag, o.ctrl);
     const tip = (x, y) => `<circle class='cw-tip' cx='${x}' cy='${y}' r='2.4'/>`;
     return `<g class='cw ${o.color || 'brown'} ${o.cls || ''}'${o.net ? ` data-w='${o.net}'` : ''}>` +
       `<path class='cw-out' d='${d}'/><path class='cw-base' d='${d}'/><path class='cw-b1' d='${d}'/><path class='cw-b2' d='${d}'/>` +
@@ -74,7 +81,9 @@
     'knife-switch': { a: [16, 84], b: [144, 84] },
     magnet: { a: [22, 58], b: [128, 58] },
     relay: { c1: [18, 107], c2: [40, 107], com: [98, 107], nc: [134, 107], no: [166, 107] },
-    terminal: { t: [24, 26] }
+    terminal: { t: [24, 26] },
+    voltmeter: { '-': [22, 96], '+': [118, 96] },
+    'voltaic-pile': { '-': [16, 147], '+': [74, 147] }
   };
   // place a part inside a scene <svg>: returns { svg, pin(name) -> [x, y] in scene units }
   function place(key, x, y, scale, attrs) {
@@ -82,6 +91,83 @@
     const w = vb[2] * scale, h = vb[3] * scale;
     const svg = part(key, `x='${x}' y='${y}' width='${w}' height='${h}' ${attrs || ''}`);
     return { svg, w, h, pin: n => { const p = (PINS[key] || {})[n]; return [+(x + p[0] * scale).toFixed(1), +(y + p[1] * scale).toFixed(1)]; } };
+  }
+
+
+  // ---- routed cloth wire: straight runs with rounded elbows; long level runs sag a little (cloth has weight) ----
+  // pts = [[x,y], ...] including both ends. o.r = elbow radius (default 12), o.droop = sag per 100 px of level run (default 4, max 10 px)
+  function route(pts, o) {
+    o = o || {}; const r = o.r == null ? 12 : o.r, droop = o.droop == null ? 4 : o.droop, F = n => +(+n).toFixed(1);
+    // corner cut points
+    const cut = [];
+    for (let i = 1; i < pts.length - 1; i++) {
+      const [x0, y0] = pts[i - 1], [x1, y1] = pts[i], [x2, y2] = pts[i + 1];
+      const l1 = Math.hypot(x1 - x0, y1 - y0) || 1, l2 = Math.hypot(x2 - x1, y2 - y1) || 1;
+      const k1 = Math.min(r, l1 / 2) / l1, k2 = Math.min(r, l2 / 2) / l2;
+      cut.push({ a: [x1 - (x1 - x0) * k1, y1 - (y1 - y0) * k1], c: [x1, y1], b: [x1 + (x2 - x1) * k2, y1 + (y2 - y1) * k2] });
+    }
+    let d = `M${F(pts[0][0])} ${F(pts[0][1])}`, cur = pts[0];
+    const seg = to => {   // a run from cur to `to`: level and long -> gentle quadratic sag, else straight
+      const dx = to[0] - cur[0], dy = to[1] - cur[1], L = Math.hypot(dx, dy);
+      if (Math.abs(dy) < 1 && L > 60 && droop) { const s = Math.min(10, L / 100 * droop); d += ` Q${F((cur[0] + to[0]) / 2)} ${F(cur[1] + 2 * s)} ${F(to[0])} ${F(to[1])}`; }
+      else d += ` L${F(to[0])} ${F(to[1])}`;
+      cur = to;
+    };
+    cut.forEach(c => { seg(c.a); d += ` Q${F(c.c[0])} ${F(c.c[1])} ${F(c.b[0])} ${F(c.b[1])}`; cur = c.b; });
+    seg(pts[pts.length - 1]);
+    return d;
+  }
+  // route between two rows of modules: leave each pin sideways (outwards, past the module edge), drop to the gap
+  // between the rows, run along it, and come back up/down to the other pin. Returns the inner points for BENCH.wire(..., {route}).
+  //   p, q   : {x, y} pin centres (stage units)
+  //   o.gapY : y of the run between the rows (e.g. midway between the bottom of the upper row and the top of the lower row)
+  //   o.outP / o.outQ : -1 if that pin faces left (e.g. Cout on the left edge), +1 if it faces right (Cin on the right edge)
+  //   o.lead : how far to go out before turning (default 16): enough to clear the module edge, small enough to stay on the bench
+  //   o.minX / o.maxX : keep the vertical runs inside these bounds (bench edges)
+  function rowRoute(p, q, o) {
+    o = o || {}; const lead = o.lead == null ? 16 : o.lead, lo = o.minX == null ? -1e9 : o.minX, hi = o.maxX == null ? 1e9 : o.maxX;
+    const cx = x => Math.max(lo, Math.min(hi, x));
+    const xp = cx(p.x + (o.outP || -1) * lead), xq = cx(q.x + (o.outQ || 1) * lead), g = o.gapY;
+    return [[xp, p.y], [xp, g], [xq, g], [xq, q.y]];
+  }
+
+  // ---- voltaic pile + voltmeter ----
+  const pile = (cells, opt) => A().pile(cells, opt);
+  const meterAngle = (v, max) => Math.max(-64, Math.min(64, -60 + 120 * (v / (max || 6))));   // stop pins at +-64 deg
+  // swing the needle to `v` volts: a damped moving-coil swing (overshoot ~14%, one small return), ~650 ms.
+  // Reduced motion: the needle is set at once and the dial gets the brief highlight.
+  function meter(el, v, o) {
+    o = o || {}; const nd = $('.needle', el); if (!nd) return Promise.resolve();
+    const to = meterAngle(v, o.max), from = el.dataset.angle != null ? +el.dataset.angle : -60;
+    el.dataset.angle = to; el.dataset.volts = v;
+    nd.style.transition = 'none'; nd.style.transform = `rotate(${to}deg)`;
+    if (reduce() || !can(nd) || Math.abs(to - from) < .2) { if (reduce() && Math.abs(to - from) >= .2) flash(el); return Promise.resolve(); }
+    const dlt = to - from, ov = Math.max(-9, Math.min(9, dlt * .14)), clampA = a => Math.max(-64, Math.min(64, a));
+    const a = nd.animate([
+      { transform: `rotate(${from}deg)`, easing: 'cubic-bezier(.3,.1,.3,1)' },
+      { transform: `rotate(${clampA(to + ov)}deg)`, offset: .48, easing: 'ease-in-out' },
+      { transform: `rotate(${clampA(to - ov * .32)}deg)`, offset: .74, easing: 'ease-in-out' },
+      { transform: `rotate(${clampA(to + ov * .08)}deg)`, offset: .9 },
+      { transform: `rotate(${to}deg)` }], { duration: o.ms || 650 });
+    return a.finished.catch(() => {});
+  }
+
+  // ---- parts drawer inside the bench scene (front edge) ----
+  // markup: append BENCH.drawerHtml({label, id, slotsId, pullId, pullLabel, open}) to a .bn-scene and add .has-drawer to the scene; put the tray buttons
+  // into .bn-drawer-slots. BENCH.drawer(drawerEl, open) slides it in/out (the brass pull is the toggle button).
+  function drawerHtml(o) {
+    o = o || {};
+    return `<div class="bn-drawer" data-open="${o.open === false ? 'false' : 'true'}"${o.id ? ` id="${o.id}"` : ''}>` +
+      `<div class="bn-drawer-box"><div class="bn-drawer-slots" role="list"${o.slotsId ? ` id="${o.slotsId}"` : ''}></div></div>` +
+      `<div class="bn-drawer-front"><span class="bn-drawer-label">${o.label || 'Parts'}</span>` +
+      `<button type="button" class="bn-drawer-pull"${o.pullId ? ` id="${o.pullId}"` : ''} aria-expanded="${o.open === false ? 'false' : 'true'}" aria-label="${o.pullLabel || 'Parts drawer'}"></button></div></div>`;
+  }
+  function drawer(el, open) {
+    if (open == null) open = el.dataset.open !== 'true';
+    el.dataset.open = open ? 'true' : 'false';
+    const b = $('.bn-drawer-pull', el); if (b) b.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (reduce()) flash(el);
+    return open;
   }
 
   // ---- spark ----
@@ -191,5 +277,5 @@
       else heat(s, on); });
   }
 
-  root.BENCH = { PINS, place, installDefs, part, benchTop, wirePath, wire, setWire, spark, heat, knife, magnet, relay, tighten, loosen, burst, binaryRow, setBinary, flash, reduce };
+  root.BENCH = { PINS, place, installDefs, part, benchTop, wirePath, wire, setWire, route, rowRoute, pile, meter, meterAngle, drawerHtml, drawer, spark, heat, knife, magnet, relay, tighten, loosen, burst, binaryRow, setBinary, flash, reduce };
 })(window);

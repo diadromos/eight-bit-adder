@@ -32,32 +32,30 @@
   P.build = function () {
     const cfg = this.cfg;
     this.host.innerHTML =
-      `<div class="bench-wrap" data-mode="${this.mode}"><div class="bn-scene bench-scene" id="bench">${root.BENCH.benchTop()}` +
-      `<div class="bench-stage" id="bench-stage" tabindex="-1"><div class="slots"></div><div class="parts"></div><svg class="bn-wires" aria-hidden="true"></svg><div class="terms"></div></div></div>` +
+      `<div class="bench-wrap" data-mode="${this.mode}"><div class="bn-scene bench-scene has-drawer" id="bench">${root.BENCH.benchTop()}` +
+      `<div class="bench-stage" id="bench-stage" tabindex="-1"><div class="slots"></div><div class="parts"></div><svg class="bn-wires" aria-hidden="true"></svg><div class="terms"></div></div>` +
+      root.BENCH.drawerHtml({ label: cfg.ui.tray, slotsId: 'tray', pullId: 'tray-pull' }) + `</div>` +
       `<div class="bench-tools"><button class="btn bench-btn" id="bench-delete" type="button" disabled>${cfg.ui.remove}</button>` +
-      `<button class="btn bench-btn" id="bench-clear" type="button">${cfg.ui.clear}</button><p class="bench-status" id="bench-status" aria-live="polite"></p></div>` +
-      `<div class="tray-wrap"><div class="tray-label">${cfg.ui.tray}</div><div class="tray" id="tray" role="list"></div></div></div>`;
+      `<button class="btn bench-btn" id="bench-clear" type="button">${cfg.ui.clear}</button><p class="bench-status" id="bench-status" aria-live="polite"></p></div></div>`;
     this.el = this.host.querySelector('#bench'); this.stage = this.host.querySelector('.bench-stage');
     this.partsEl = this.stage.querySelector('.parts'); this.wiresEl = this.stage.querySelector('.bn-wires'); this.termsEl = this.stage.querySelector('.terms');
     this.slotsEl = this.stage.querySelector('.slots'); this.trayEl = this.host.querySelector('#tray'); this.statusEl = this.host.querySelector('#bench-status');
     this.host.querySelector('#bench-delete').addEventListener('click', () => this.deleteSelected());
     this.host.querySelector('#bench-clear').addEventListener('click', () => this.clear());
+    this.drawerEl = this.host.querySelector('.bn-drawer');
+    this.drawerEl.querySelector('.bn-drawer-pull').addEventListener('click', () => root.BENCH.drawer(this.drawerEl));
     this.buildTray();
     this.bindStage();
     this.ro = new ResizeObserver(() => this.layout()); this.ro.observe(this.el);
   };
   P.destroy = function () { if (this.ro) this.ro.disconnect(); if (root.SFX) root.SFX.hum(false); };
   P.buildTray = function () {
-    const items = this.cfg.tray, per = 4, trays = Math.max(1, Math.ceil(items.length / per));
+    // one felt compartment per part, in the drawer at the front edge of the bench (BENCH.drawerHtml)
     let h = '';
-    for (let t = 0; t < trays; t++) {
-      h += `<div class="tray-box">${root.BENCH_ART.tray}`;
-      items.slice(t * per, t * per + per).forEach((it, i) => {
-        h += `<button type="button" class="tray-item" role="listitem" id="tray-${it.key}" data-key="${it.key}" style="left:${12 + i * 86}px">` +
-          `<span class="thumb">${this.thumb(it)}</span><span class="tname">${it.name}</span><span class="tcount"></span></button>`;
-      });
-      h += '</div>';
-    }
+    this.cfg.tray.forEach(it => {
+      h += `<button type="button" class="tray-item" role="listitem" id="tray-${it.key}" data-key="${it.key}">` +
+        `<span class="thumb">${this.thumb(it)}</span><span class="tname">${it.name}</span><span class="tcount"></span></button>`;
+    });
     this.trayEl.innerHTML = h;
     this.trayEl.querySelectorAll('.tray-item').forEach(b => {
       b.addEventListener('click', () => { if (this.suppress) return; this.place(b.dataset.key); });
@@ -260,8 +258,8 @@
 
   /* ---------------- pointer + keyboard ---------------- */
   P.toStage = function (e) { const r = this.stage.getBoundingClientRect(); return { x: (e.clientX - r.left) / this.scale, y: (e.clientY - r.top) / this.scale }; };
-  P.overTray = function (e) { const r = this.host.querySelector('.tray-wrap').getBoundingClientRect(); return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom; };
-  P.overStage = function (e) { const r = this.el.getBoundingClientRect(); return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom; };
+  P.overTray = function (e) { const r = this.drawerEl.getBoundingClientRect(); return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom; };
+  P.overStage = function (e) { const r = this.stage.getBoundingClientRect(); return !this.overTray(e) && e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom; };
   P.slotAt = function (e) { const q = this.toStage(e); return this.slots.findIndex(s => q.x >= s.x && q.x <= s.x + s.w && q.y >= s.y && q.y <= s.y + s.h); };
   P.noClick = function () { this.suppress = true; setTimeout(() => { this.suppress = false; }, 0); };
   P.bindStage = function () {
@@ -318,7 +316,8 @@
       if (!moved && Math.hypot(ev.clientX - s0.x, ev.clientY - s0.y) < 8) return;
       moved = true; const p = this.pt(a), q = this.toStage(ev);
       if (!rub) { rub = document.createElementNS('http://www.w3.org/2000/svg', 'g'); rub.setAttribute('class', 'cw brown rubber'); this.wiresEl.appendChild(rub); }
-      const d = ART().wirePath(p, q); rub.innerHTML = `<path class="cw-out" d="${d}"/><path class="cw-base" d="${d}"/><path class="cw-b1" d="${d}"/>`;
+      const rt = this.cfg.wireRoute && this.cfg.wireRoute(p, q, this), d = rt ? root.BENCH.route([[p.x, p.y]].concat(rt, [[q.x, q.y]])) : ART().wirePath(p, q);   // same route as the finished wire
+      rub.innerHTML = `<path class="cw-out" d="${d}"/><path class="cw-base" d="${d}"/><path class="cw-b1" d="${d}"/>`;
       const over = document.elementFromPoint(ev.clientX, ev.clientY); this.termsEl.querySelectorAll('.term.target').forEach(t => t.classList.remove('target'));
       const ot = over && over.closest && over.closest('.term'); if (ot && ot !== term) ot.classList.add('target');
     };

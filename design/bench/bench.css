@@ -107,14 +107,17 @@
   background:radial-gradient(130% 120% at 30% 15%,#7a4423,#3d1e0e 55%,#1c0c04);
   box-shadow:inset 0 0 0 1px rgba(0,0,0,.6),inset 0 2px 0 rgba(255,200,150,.25),inset 0 -5px 0 rgba(0,0,0,.5),0 8px 0 #120700,0 12px 18px rgba(0,0,0,.55)}
 /* title on an engraved brass plate with 2 screws */
-.module.bench>.mtitle{align-self:center;white-space:nowrap;margin:8px 4px;padding:6px 18px;border-radius:5px;font:700 14px/1.1 var(--bn-serif);letter-spacing:.06em;text-transform:uppercase;
+.module.bench>.mtitle{align-self:center;min-width:0;text-wrap:balance;margin:8px 4px;padding:6px 12px;gap:6px;border-radius:5px;font:700 14px/1.1 var(--bn-serif);letter-spacing:.06em;text-transform:uppercase;
   color:var(--bn-engrave);text-shadow:0 1px 0 rgba(255,245,210,.65);
   background:
     radial-gradient(circle at 8px 50%,#5b3f0e 0 2px,#f5dc96 2.5px 3.6px,transparent 4px),
     radial-gradient(circle at calc(100% - 8px) 50%,#5b3f0e 0 2px,#f5dc96 2.5px 3.6px,transparent 4px),
     linear-gradient(180deg,#f8e3a0,#d8b35a 45%,#b48a35 55%,#e9c66b);
   box-shadow:inset 0 0 0 1px #6e4f16,0 1px 2px rgba(0,0,0,.45)}
-.module.bench .micon{color:var(--bn-engrave)}
+.module.bench .micon{color:var(--bn-engrave);flex:none;width:28px;height:19px}
+/* pins overhang the box by 14px (mpins margin -14px), so 14px of side margin is enough; style.css's 18px made zoomed thumbnails overflow */
+.module.bench{margin-inline:14px}
+.module.bench .micon .body{fill:rgba(59,39,6,.12)}            /* engraved outline on the brass plate, not a dark blob */
 .module.bench .mpins.in{margin-left:-14px} .module.bench .mpins.out{margin-right:-14px}
 /* terminal = a brass screw on the box edge; the lead (::before) is cloth wire */
 .module.bench .mpin{height:26px;font:700 11px var(--bn-serif);letter-spacing:.04em;color:#f6e3bd}
@@ -198,6 +201,55 @@
 .binrow .bb.on .bit-v{color:var(--bn-amber);text-shadow:0 0 6px var(--bn-glow)}
 .binrow .nibgap{display:none}
 @media (max-width:420px){.binrow{gap:2px;padding:6px}.binrow .pv{font-size:9.5px;padding:1px 3px}}
+
+/* ===== step 1: voltaic pile (BENCH.pile) + moving-coil voltmeter (BENCH_ART.voltmeter) ===== */
+.bn-pile .cell{transition:filter var(--t,120ms)}
+.bn-pile.on .cu{filter:drop-shadow(0 0 2px rgba(255,194,71,.55))}
+.bn-pile.on .plate.top,.bn-pile.on .lead{filter:drop-shadow(0 0 2px var(--bn-glow))}
+.bn-pile .cell.flipped .cloth{filter:brightness(.92)}
+.bn-pile .cell:hover .card,.bn-pile .cell.hot .card{filter:brightness(1.25)}
+.bn-pile.one .frame{display:none}      /* single cell in the tray: just the discs on the plinth */
+.bn-voltmeter .needle{transform:rotate(-60deg)}                               /* 0 V; BENCH.meter sets the inline angle */
+.bn-voltmeter.over .pointer{fill:#8a2a1c}
+/* no CSS transition on .needle: BENCH.meter plays a WAAPI swing (a transition would override it in the cascade) */
+
+/* ===== parts drawer, pulled out at the front edge of the bench (inside .bn-scene) =====
+   <div class="bn-scene has-drawer"> benchTop … stage … BENCH.drawerHtml() </div>
+   The scene keeps its own height for the stage; .has-drawer adds the drawer's room below it as padding
+   (content-box), so a script that sets the scene's height for the stage needs no change. */
+.bn-scene.has-drawer{--bn-drawer-h:150px;--bn-apron:18px;box-sizing:content-box;padding-bottom:var(--bn-drawer-h)}
+.bn-scene.has-drawer:has(.bn-drawer[data-open=false]){--bn-drawer-h:44px}
+/* the bench's front edge (apron) with the drawer opening cut into it */
+.bn-scene.has-drawer::after{content:"";position:absolute;left:0;right:0;bottom:0;height:var(--bn-apron);z-index:1;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,220,170,.35) 0 1px,#6e4019 1px,#5a3312 55%,#3e220c);
+  box-shadow:0 -6px 10px rgba(30,14,4,.35)}
+.bn-drawer{position:absolute;left:50%;bottom:6px;translate:-50% 0;z-index:2;width:max-content;max-width:calc(100% - 20px);
+  display:flex;flex-direction:column;align-items:stretch;filter:drop-shadow(0 8px 10px rgba(20,8,2,.55))}
+/* the open box: wood sides seen from above, felt floor with wooden dividers; slightly wider at the front (pulled toward you) */
+.bn-drawer-box{position:relative;padding:8px 10px 6px;margin:0 6px;border-radius:6px 6px 0 0;
+  background:linear-gradient(180deg,#5f3714,#8a5527 18%,#7a4a22);clip-path:polygon(2.5% 0,97.5% 0,100% 100%,0 100%);
+  box-shadow:inset 0 2px 0 rgba(255,220,170,.25);transition:max-height 260ms cubic-bezier(.2,.8,.2,1),opacity 200ms;max-height:120px;overflow:hidden}
+/* compartments are --cw wide with --cg wooden dividers; the floor pattern draws empty compartments too (at least 4) */
+.bn-drawer{--cw:77px;--cg:6px}
+.bn-drawer-slots{display:grid;grid-auto-flow:column;grid-auto-columns:var(--cw);gap:var(--cg);overflow-x:auto;scrollbar-width:thin;
+  min-width:calc(4 * var(--cw) + 3 * var(--cg) + 8px);padding:4px;border-radius:3px;
+  background:repeating-linear-gradient(90deg,transparent 0 var(--cw),#6e4019 var(--cw) calc(var(--cw) + 1px),#8a5527 calc(var(--cw) + 1px) calc(var(--cw) + var(--cg) - 1px),#4a2a0e calc(var(--cw) + var(--cg) - 1px) calc(var(--cw) + var(--cg))) 4px 0/calc(100% - 4px) 100% no-repeat,
+    linear-gradient(180deg,#1b3326,#2c4b3a);background-color:#3a1f0a;box-shadow:inset 0 3px 6px rgba(0,0,0,.6),inset 0 0 0 4px #5f3714}
+.bn-drawer-slots>*{position:relative!important;left:auto!important;top:auto!important;width:auto!important;height:82px;border-radius:3px!important;
+  background:linear-gradient(180deg,#1b3326,#2c4b3a)!important;box-shadow:inset 0 2px 5px rgba(0,0,0,.55),inset 0 0 0 1px rgba(0,0,0,.35)}
+.bn-drawer-slots>*:hover:not(:disabled){background:linear-gradient(180deg,#24402f,#355a45)!important}
+/* the drawer front: a wooden panel with a brass card holder and a brass cup pull (the toggle) */
+.bn-drawer-front{position:relative;height:30px;border-radius:4px;display:flex;align-items:center;justify-content:center;gap:14px;padding:0 14px;
+  background:linear-gradient(180deg,#a7703a,#8a5527 50%,#6e4019);box-shadow:inset 0 1px 0 rgba(255,225,180,.45),inset 0 -2px 0 rgba(40,18,4,.5),0 3px 0 #3a1f0a}
+.bn-drawer-label{font:700 10.5px var(--bn-serif);letter-spacing:.16em;text-transform:uppercase;color:var(--bn-engrave);padding:2px 10px;border-radius:2px;
+  background:linear-gradient(180deg,#f1e6cc,#e1d1ab);box-shadow:0 0 0 2px #c79a3f,0 0 0 3px #5a3f10,0 1px 2px 3px rgba(0,0,0,.25)}
+.bn-drawer-pull{width:46px;height:16px;border:0;padding:0;border-radius:3px 3px 12px 12px;cursor:pointer;
+  background:radial-gradient(60% 90% at 50% 20%,#fff2c0,#d8b35a 40%,#8a6420 85%);box-shadow:0 0 0 1px #5a3f10,0 2px 3px rgba(0,0,0,.5),inset 0 -3px 4px rgba(60,36,6,.6)}
+.bn-drawer-pull:focus-visible{outline:3px solid var(--ring,rgba(127,212,168,.6));outline-offset:3px}
+.bn-drawer[data-open=false] .bn-drawer-box{max-height:0;opacity:0;padding-top:0;padding-bottom:0}
+@media (prefers-reduced-motion:reduce){.bn-drawer-box{transition:none}}
+.bn-reduce .bn-drawer-box{transition:none}
+@media (max-width:420px){.bn-drawer{--cw:71px;--cg:5px}}
 
 /* ===== reduced motion: instant state + brief highlight, no swing, overshoot, spark or flow =====
    Applies with the OS setting, or when <html class="bn-reduce"> is set (an in-app "calm motion" toggle; BENCH.reduce() honours both). */
