@@ -87,7 +87,10 @@
     }).join('');
     $$('#step-nav .rung').forEach(b => b.addEventListener('click', () => { const n = +b.dataset.step; if (unlocked(n)) go(n); }));
     $('#step-line').textContent = UI.stepOf(cur, T.steps[cur].title);
-    const r = $('#step-nav-' + cur); if (r && r.scrollIntoView && matchMedia('(max-width:900px)').matches) r.scrollIntoView({ block: 'nearest', inline: 'center' });
+    /* phones: centre the current rung in the horizontal step strip. Only the strip scrolls; scrollIntoView here used to jump the
+       whole page (to the strip) on every step change and every sub-tab click. */
+    const r = $('#step-nav-' + cur), ol = $('#step-nav');
+    if (r && ol && ol.scrollWidth > ol.clientWidth) { const a = ol.getBoundingClientRect(), b = r.getBoundingClientRect(); ol.scrollLeft += (b.left + b.width / 2) - (a.left + a.width / 2); }
   }
 
   /* ---------------- goal card ---------------- */
@@ -175,7 +178,7 @@
   function mkBench(host, key, cfg) {
     const b = new root.Bench(host, Object.assign({
       state: S.benches[key], ui: UI, partName,
-      size: { desk: [960, 540], mob: [480, 720] },
+      size: { desk: [960, 540], mob: key === '5' ? [480, 560] : [480, 720] },   // Step 5's five parts fit a shorter phone bench
       onChange: (bb, why, info) => { S.benches[key] = bb.state(); save(); if (cfg.check) cfg.check(bb, why, info); }
     }, cfg));
     return b;
@@ -246,8 +249,11 @@
     const n = cur, host = document.createElement('div'); w.appendChild(host);
     if (n === 4) {
       const tools = document.createElement('div'); tools.className = 'magnet-tools'; tools.id = 'magnet-tools';
-      tools.innerHTML = `<button class="btn" id="magnet-turns-less" type="button">${UI.magnetLess}</button><output id="magnet-turns"></output>` +
-        `<button class="btn" id="magnet-turns-more" type="button">${UI.magnetMore}</button><button class="btn" id="magnet-wire-insulated" type="button" aria-pressed="false"></button>`;
+      /* the coil controls dock to the bottom of the screen while the bench is in view (sticky, see ladder.css), and pulse once
+         when the magnet arrives; the hint line under them is Joseph's Step 4 hint text, verbatim */
+      tools.innerHTML = `<div class="magnet-row"><button class="btn" id="magnet-turns-less" type="button">${UI.magnetLess}</button><output id="magnet-turns"></output>` +
+        `<button class="btn" id="magnet-turns-more" type="button">${UI.magnetMore}</button><button class="btn" id="magnet-wire-insulated" type="button" aria-pressed="false"></button></div>` +
+        `<p class="magnet-hint" id="magnet-hint" aria-live="polite"></p>`;
       w.appendChild(tools);
     }
     bench = mkBench(host, String(n), {
@@ -256,14 +262,27 @@
     });
     if (n === 4) {
       const mag = () => bench.parts.find(p => p.kind === 'magnet');
-      const sync = () => { const m = mag(); $('#magnet-turns').textContent = m ? UI.magnetTurns(m.turns) : UI.magnetNone; $('#magnet-turns').dataset.value = m ? m.turns : '';
+      const sync = (first) => { const m = mag(); $('#magnet-turns').textContent = m ? UI.magnetTurns(m.turns) : UI.magnetNone; $('#magnet-turns').dataset.value = m ? m.turns : '';
         ['#magnet-turns-less', '#magnet-turns-more', '#magnet-wire-insulated'].forEach(s => { $(s).disabled = !m; });
-        const ins = !!(m && m.insulated); $('#magnet-wire-insulated').setAttribute('aria-pressed', ins ? 'true' : 'false'); $('#magnet-wire-insulated').textContent = UI.magnetInsulated[ins ? 1 : 0]; };
+        const ins = !!(m && m.insulated); $('#magnet-wire-insulated').setAttribute('aria-pressed', ins ? 'true' : 'false'); $('#magnet-wire-insulated').textContent = UI.magnetInsulated[ins ? 1 : 0];
+        const tl = $('#magnet-tools'), hints = T.steps[4].hints;
+        tl.classList.toggle('live', !!m);
+        // Joseph's hints: "more turns" first; once turns were added to bare wire (which can't help), the "insulated wire" one
+        $('#magnet-hint').textContent = !m ? '' : (!ins && m.turns > 20 ? hints[1] : hints[0]) || '';
+        if (m && !run.magnetSeen) {     // the magnet just arrived: point at its controls
+          run.magnetSeen = true; tl.classList.remove('attn'); void tl.offsetWidth; tl.classList.add('attn');
+          clearTimeout(run.attnT); run.attnT = setTimeout(() => tl.classList.remove('attn'), 2600);
+          // placed from the drawer while the magnet's spot is off screen (phones): bring the magnet up into view; the docked
+          // controls stay on screen below it, so magnet and controls are seen together
+          const pe = !first && $('#part-' + m.id), r = pe && pe.getBoundingClientRect(), dock = tl.getBoundingClientRect().height;
+          if (r && (r.top < 0 || r.bottom > innerHeight - dock)) scrollBy({ top: r.top - Math.max(12, (innerHeight - dock - r.height) / 3), behavior: root.BENCH.reduce() ? 'auto' : 'smooth' });
+        }
+        if (!m) run.magnetSeen = false; };
       const chg = f => { const m = mag(); if (!m) return; f(m); bench.run('magnet'); sync(); };
       $('#magnet-turns-more').addEventListener('click', () => chg(m => { m.turns = Math.min(120, m.turns + 10); }));
       $('#magnet-turns-less').addEventListener('click', () => chg(m => { m.turns = Math.max(10, m.turns - 10); }));
       $('#magnet-wire-insulated').addEventListener('click', () => chg(m => { m.insulated = !m.insulated; }));
-      run.syncMagnet = sync; sync();
+      run.syncMagnet = sync; sync(true);
     }
     elecCheck(n, bench, 'render');
   }
@@ -437,7 +456,7 @@
   /* Step 9: eight full adders in a row; the carry chain is yours to wire */
   function nineSlots(W, H) {
     const pitch = 152, w = 146;
-    if (W < 800) return [...Array(8)].map((_, i) => ({ id: 'nine-slot-' + i, bit: i, label: UI.slot(i), w, h: 150, x: W - 10 - ((i % 4) + 1) * pitch + 6, y: i >= 4 ? 30 : 250 }));
+    if (W < 800) return [...Array(8)].map((_, i) => ({ id: 'nine-slot-' + i, bit: i, label: UI.slot(i), w, h: 150, x: W - 10 - ((i % 4) + 1) * pitch + 6, y: i >= 4 ? 22 : 218 }));
     return [...Array(8)].map((_, i) => ({ id: 'nine-slot-' + i, bit: i, label: UI.slot(i), w, h: 170, x: W - 10 - (i + 1) * pitch + 6, y: 40 }));
   }
   function step9(w) {
@@ -477,7 +496,7 @@
       return { placed, chain, r };
     };
     bench = mkBench($('#bench-host'), '9', {
-      mode: 'logic', tray: [trayItem('FULL', 8)], slots: nineSlots, size: { desk: [1240, 250], mob: [624, 440] },
+      mode: 'logic', tray: [trayItem('FULL', 8)], slots: nineSlots, size: { desk: [1240, 250], mob: [624, 400] },
       modulePins: p => [[['Cout', 'out']], [['Cin', 'in']], p.slot != null ? UI.nineBit(p.slot) : ''],
       logicExtra: b => extra(b, S.nine.a, S.nine.b), status: logicStatus,
       /* phone layout (two rows): a wire between the rows runs along the gap between them instead of cutting across the modules */

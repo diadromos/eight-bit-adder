@@ -280,6 +280,11 @@
   P.overStage = function (e) { const r = this.stage.getBoundingClientRect(); return !this.overTray(e) && e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom; };
   P.slotAt = function (e) { const q = this.toStage(e); return this.slots.findIndex(s => q.x >= s.x && q.x <= s.x + s.w && q.y >= s.y && q.y <= s.y + s.h); };
   P.noClick = function () { this.suppress = true; setTimeout(() => { this.suppress = false; }, 0); };
+  /* one drag's listeners: up runs once, on pointerup, pointercancel or lostpointercapture (whichever comes first), so a drag
+     can never be left half-open with its ghost or highlight stuck on screen */
+  const DRAG_END = ['pointerup', 'pointercancel', 'lostpointercapture'];
+  function BEGIN(el, mv, up) { let done = false; up.once = ev => { if (done) return; done = true; up(ev); }; el.addEventListener('pointermove', mv); DRAG_END.forEach(t => el.addEventListener(t, up.once)); }
+  function END(el, mv, up) { el.removeEventListener('pointermove', mv); DRAG_END.forEach(t => el.removeEventListener(t, up.once)); }
   P.bindStage = function () {
     const st = this.stage;
     st.addEventListener('pointerdown', e => {
@@ -299,15 +304,18 @@
         this.movePartTerms(p); this.drawWires();
         this.slotsEl.querySelectorAll('.slot').forEach((el, i) => el.classList.toggle('hot', i === this.slotAt(ev)));
       };
+      /* pointercancel (the browser took the touch, e.g. to scroll) or a lost capture: undo the drag. It must not count as a
+         tap, and its coordinates must not drop the part into the drawer (that used to delete it). */
       const up = ev => {
-        d.removeEventListener('pointermove', mv); d.removeEventListener('pointerup', up); d.removeEventListener('pointercancel', up);
+        END(d, mv, up);
         d.classList.remove('dragging'); this.slotsEl.querySelectorAll('.slot').forEach(el => el.classList.remove('hot'));
+        if (ev.type !== 'pointerup') { if (moved) { p.x = s0.px; p.y = s0.py; this.posPart(p); this.movePartTerms(p); this.drawWires(); } return; }
         if (!moved) { this.tap(p.id); return; }
         if (this.overTray(ev) && !p.fixed) { this.removePart(p.id); return; }
         if (p.slot != null) { const si = this.slotAt(ev); if (si >= 0 && !this.parts.some(q => q !== p && q.slot === si)) p.slot = si; }
         this.clamp(p); this.posPart(p); this.movePartTerms(p); this.drawWires(); this.run('move');
       };
-      d.addEventListener('pointermove', mv); d.addEventListener('pointerup', up); d.addEventListener('pointercancel', up);
+      BEGIN(d, mv, up);
     });
     st.addEventListener('click', e => {
       const term = e.target.closest('.term');
@@ -340,14 +348,14 @@
       const ot = over && over.closest && over.closest('.term'); if (ot && ot !== term) ot.classList.add('target');
     };
     const up = ev => {
-      term.removeEventListener('pointermove', mv); term.removeEventListener('pointerup', up); term.removeEventListener('pointercancel', up);
+      END(term, mv, up);
       if (rub) rub.remove(); this.termsEl.querySelectorAll('.term.target').forEach(t => t.classList.remove('target'));
-      if (!moved) return;
+      if (!moved || ev.type !== 'pointerup') return;   // a cancelled wire drag connects nothing
       this.noClick();
       const over = document.elementFromPoint(ev.clientX, ev.clientY), ot = over && over.closest && over.closest('.term');
       if (ot) this.connect(a, { p: ot.dataset.part, pin: ot.dataset.pin });
     };
-    term.addEventListener('pointermove', mv); term.addEventListener('pointerup', up); term.addEventListener('pointercancel', up);
+    BEGIN(term, mv, up);
   };
   P.trayDrag = function (e, b) {
     if (b.disabled) return;
@@ -361,13 +369,13 @@
       this.slotsEl.querySelectorAll('.slot').forEach((el, i) => el.classList.toggle('hot', i === this.slotAt(ev)));
     };
     const up = ev => {
-      b.removeEventListener('pointermove', mv); b.removeEventListener('pointerup', up); b.removeEventListener('pointercancel', up);
+      END(b, mv, up);
       this.el.classList.remove('drop-hot'); this.slotsEl.querySelectorAll('.slot').forEach(el => el.classList.remove('hot'));
       if (!ghost) return;
       ghost.remove(); this.noClick();
       if (ev.type === 'pointerup' && this.overStage(ev)) { const si = this.slotAt(ev); this.place(b.dataset.key, this.toStage(ev), si >= 0 ? si : null); }
     };
-    b.addEventListener('pointermove', mv); b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up);
+    BEGIN(b, mv, up);
   };
 
   /* ---------------- simulation + visuals ---------------- */

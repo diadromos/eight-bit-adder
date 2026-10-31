@@ -1,7 +1,7 @@
 /* css/ladder.css: layout glue for the 9-step workbench ladder (index.html). The look itself is Henri's
    design/style.css + design/bench/bench.css; this file only arranges it and styles the few controls his kit doesn't cover. */
 html:has(body.ladder-page){background:#120b06}
-body.ladder-page{max-width:none;margin:0;padding:0;min-height:100vh;color:#f1dcb6;
+body.ladder-page{max-width:none;margin:0;padding:0;min-height:100vh;min-height:100dvh;color:#f1dcb6;
   background:radial-gradient(120% 80% at 50% 0%,#2a1a0e,#120b06 70%) fixed}
 .wrap{max-width:1280px;margin:0 auto;padding:18px 20px 40px}
 .hdr{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
@@ -52,7 +52,10 @@ body.ladder-page{max-width:none;margin:0;padding:0;min-height:100vh;color:#f1dcb
 .mthumb .module{min-width:0;pointer-events:none}
 .tray-ghost{position:fixed;z-index:1000;pointer-events:none;transform:translate(-50%,-50%) scale(1.3);opacity:.9;filter:drop-shadow(0 10px 10px rgba(0,0,0,.5))}
 .tray-ghost svg{max-width:80px;max-height:70px}
-.bench-scene{min-height:0;touch-action:none}
+/* the bench lets the page scroll vertically when a finger lands on empty wood (it is taller than a phone screen, so
+   touch-action:none here trapped the page); parts and terminals still take every gesture for dragging and wiring */
+.bench-scene{min-height:0;touch-action:pan-y pinch-zoom}
+.bench-scene .term{touch-action:none}
 .bench-scene.drop-hot{box-shadow:0 0 0 3px var(--bn-amber),0 8px 24px rgba(0,0,0,.45)}
 .bench-stage{position:absolute;left:0;top:0;transform-origin:0 0}
 .bench-stage .parts,.bench-stage .terms,.bench-stage .slots{position:absolute;inset:0}
@@ -127,6 +130,19 @@ body.ladder-page{max-width:none;margin:0;padding:0;min-height:100vh;color:#f1dcb
 .magnet-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
 .magnet-tools output{font:800 15px var(--mono);color:var(--bn-amber);min-width:84px;text-align:center}
 .magnet-tools .btn{min-height:44px}
+.magnet-tools .magnet-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.magnet-hint{margin:0;font:italic 14px/1.35 var(--bn-serif);color:#f6e3bd}
+.magnet-hint:empty{display:none}
+/* Step 4: once the magnet is on the bench its coil controls dock to the bottom of the screen while the bench is in view,
+   so they never scroll away from the magnet they change; they settle back under the bench at its end */
+.magnet-tools{flex-direction:column;align-items:flex-start;gap:6px}
+.magnet-tools.live{position:sticky;bottom:0;z-index:20;padding:8px 10px calc(8px + env(safe-area-inset-bottom));border-radius:6px;
+  background:linear-gradient(180deg,rgba(58,36,20,.97),rgba(38,23,13,.97));box-shadow:0 -4px 18px rgba(0,0,0,.45),inset 0 0 0 1px rgba(232,177,74,.35)}
+.magnet-tools.attn{animation:magnet-attn 1.2s ease-in-out 2}
+.magnet-tools.attn #magnet-turns-more{box-shadow:0 0 0 3px var(--bn-amber)}
+@keyframes magnet-attn{0%,100%{box-shadow:0 -4px 18px rgba(0,0,0,.45),inset 0 0 0 1px rgba(232,177,74,.35)}50%{box-shadow:0 -4px 18px rgba(0,0,0,.45),0 0 0 4px var(--bn-amber),0 0 22px 6px rgba(232,177,74,.55)}}
+@media (prefers-reduced-motion:reduce){.magnet-tools.attn{animation:none;box-shadow:0 0 0 3px var(--bn-amber)}}
+.bn-reduce .magnet-tools.attn{animation:none;box-shadow:0 0 0 3px var(--bn-amber)}
 /* step 7 */
 .bin-scene{padding:22px 18px;min-height:0}
 .bin-scene .challenge{margin:0 0 10px;font:700 14px var(--bn-serif);letter-spacing:.06em;color:#fbeed3;text-shadow:0 1px 2px #000}
@@ -166,6 +182,11 @@ body.ladder-page{max-width:none;margin:0;padding:0;min-height:100vh;color:#f1dcb
   .tt-panel{grid-template-columns:1fr}
   .pile-scene{gap:16px;padding:16px 8px}
   .meter-box svg{width:170px}
+  /* tighter goal card on phones, so the goal and the bench sit closer together */
+  .goal-card{padding:12px 12px 10px}
+  .magnet-tools .magnet-row{gap:6px}
+  .magnet-tools .btn{padding-left:10px;padding-right:10px}
+  .magnet-tools output{min-width:0}
 }
 [data-step="9"] .bn-part .module.bench{width:116px;grid-template-columns:auto minmax(0,1fr) auto}
 /* step 9: the plate is too narrow for side screws at 116px, so its two screws sit in the top corners, clear of the words */
